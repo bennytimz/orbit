@@ -108,3 +108,11 @@ How calls work now:
 - **`src/lib/env.ts` (necessary companion change):**
   - adds `aiModel()` and `DEFAULT_GEMINI_MODEL`, plus `integrations().ai / aiProvider / aiModel / webSearch`
   - the temporary `anthropic` / `anthropicModel` aliases were later removed; all callers now use `integrations().ai` and `aiModel()`, and the UI wording says Gemini/`GEMINI_API_KEY`
+
+### TD-020 — Save to Buffer Ideas via createIdea (2026-11-14, added after submission)
+- Buffer allowed net-new features after submission but no rework of existing features or UI. This feature is strictly additive: a new server action, a new lib module, a new button component inserted into the Radar card's icon row and the research page header actions.
+- `createIdea(input: CreateIdeaInput!): CreateIdeaPayload!` was introspected on the live schema. `CreateIdeaPayload` is a union of `Idea | IdeaResponse | InvalidInputError | UnauthorizedError | UnexpectedError | LimitReachedError`; each member is selected explicitly. Only a returned idea ID counts as success.
+- Scope: Buffer documents `ideas:write` as a separate scope, so `BUFFER_SCOPES` now includes it (user approved). Existing OAuth connections must reconnect to gain it; failures due to a missing scope tell the user to reconnect.
+- The action reads title, summary and the first source URL from the database for the signed-in user; the client sends only the discovery ID. Summary is cut to 500 chars at a word boundary.
+- No dedupe: saving twice creates two Ideas. Network/5xx outcomes are reported as unconfirmed so the user checks Buffer before retrying.
+

@@ -38,6 +38,7 @@ const BUFFER_FEATURES = [
   "Account, channels and posts GraphQL queries",
   "createPost for drafts, queue and custom-time scheduling",
   "X threads sent as one post via metadata.twitter.thread",
+  "createIdea: save discoveries to Buffer Ideas (added after submission)",
   "Approval enforced on the server, not just in the UI",
   "Per-channel results recorded with their Buffer post IDs",
   "Ambiguous responses marked “unknown” so a retry can’t create a duplicate post",

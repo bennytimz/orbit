@@ -13,6 +13,7 @@
 - **Model availability**: Google retires model aliases for new users (e.g. `gemini-2.5-flash`). If the default stops working, set `GEMINI_MODEL`.
 - **Media**: No image or video upload, and nothing is attached to Buffer posts. Instagram (and any other media-required channel) is blocked at preflight. Studio produces a clearly labelled *visual brief* instead of images. Image generation is not implemented.
 - **Threads**: X threads go to Buffer as `metadata.twitter.thread` with every part (top-level `text` is part 1), following the live schema introspected on 2026-11-14 (`TwitterPostMetadataInput.thread: [ThreadedPostInput!]`). This is unit-tested, but no live thread post has been created yet. On non-X channels only the first part is sent. The ledger's `text_sent` records part 1, the text Buffer stores at top level.
+- **Buffer Ideas**: "Save to Buffer Ideas" has no duplicate protection: each click creates a new Idea. Connections made before 2026-11-14 lack `ideas:write` and must reconnect. API-key connections work as the key allows. The Publishing page's OAuth blurb still lists only account/posts access (existing UI text left unchanged by the no-UI-change rule).
 - **Content Items** (Buffer, experimental) are not used. Each channel is a separate `createPost`.
 - **Editing or deleting Buffer posts** is not implemented. Changing a campaign date changes only ORBIT's plan.
 - **Analytics**: No engagement metrics are available, because Buffer's public API does not expose them. There is no manual or CSV metric import yet.
