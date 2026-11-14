@@ -12,6 +12,7 @@ import { ReportView } from "@/components/research/report-view";
 import { GenerateReportButton } from "@/components/research/generate-report-button";
 import { PerspectivePanel } from "@/components/research/perspective-panel";
 import { SaveToBufferIdeasButton } from "@/components/buffer/save-to-ideas-button";
+import { findSavedIdeaIds } from "@/lib/buffer/idea-log";
 import { formatCalendarDate, formatDate, formatDateTime, hostname } from "@/lib/format";
 import type { Discovery, Perspective, ResearchReport, ResearchSource } from "@/types/domain";
 
@@ -34,6 +35,7 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
   const sources = ((links ?? []) as unknown as { research_sources: ResearchSource | null }[]).map((l) => l.research_sources).filter((s): s is ResearchSource => !!s);
   const report = ((reports ?? []) as ResearchReport[])[0] ?? null;
   const sourceIndex = new Map(sources.map((s, i) => [s.id, { n: i + 1, source: s }]));
+  const savedIdeaId = (await findSavedIdeaIds(supabase, userId, [discovery.id]).catch(() => ({}) as Record<string, string>))[discovery.id] ?? null;
   const status = integrations();
 
   return (
@@ -57,7 +59,7 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
             <Link href={`/studio/new?discovery=${discovery.id}`} className={buttonVariants({ variant: "outline" })}>
               <PenLine /> Create content
             </Link>
-            <SaveToBufferIdeasButton discoveryId={discovery.id} />
+            <SaveToBufferIdeasButton discoveryId={discovery.id} savedIdeaId={savedIdeaId} />
           </>
         }
       />

@@ -20,7 +20,7 @@ export function ConnectBuffer({ oauthAvailable, apiKeyAvailable }: { oauthAvaila
         <PlugZap className="mb-3 size-5 text-primary" />
         <h2 className="font-semibold">Connect with Buffer</h2>
         <p className="mt-1 mb-4 text-sm text-muted-foreground">
-          Sign in to Buffer and approve access (OAuth with PKCE). ORBIT requests only: read account, read posts, create posts, and stay signed in.
+          Sign in to Buffer and approve access (OAuth with PKCE). ORBIT requests only: read account, read posts, create posts, create ideas, and stay signed in.
         </p>
         {oauthAvailable ? (
           // A plain link: the OAuth flow is a full-page redirect handled server-side.

@@ -114,5 +114,5 @@ How calls work now:
 - `createIdea(input: CreateIdeaInput!): CreateIdeaPayload!` was introspected on the live schema. `CreateIdeaPayload` is a union of `Idea | IdeaResponse | InvalidInputError | UnauthorizedError | UnexpectedError | LimitReachedError`; each member is selected explicitly. Only a returned idea ID counts as success.
 - Scope: Buffer documents `ideas:write` as a separate scope, so `BUFFER_SCOPES` now includes it (user approved). Existing OAuth connections must reconnect to gain it; failures due to a missing scope tell the user to reconnect.
 - The action reads title, summary and the first source URL from the database for the signed-in user; the client sends only the discovery ID. Summary is cut to 500 chars at a word boundary.
-- No dedupe: saving twice creates two Ideas. Network/5xx outcomes are reported as unconfirmed so the user checks Buffer before retrying.
+- Duplicate protection: the recorded Idea ID in `activity_logs` (`buffer_idea_created`, resource = discovery) marks an item as saved. The button renders "Saved to Ideas ✓" disabled, and `saveIdeaOnce` refuses a repeat save before any Buffer call; if the lookup fails, Buffer is not called. A research report shares its discovery's ID, so saving from either place counts for both. Network/5xx outcomes are reported as unconfirmed so the user checks Buffer before retrying.
 

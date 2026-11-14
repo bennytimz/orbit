@@ -118,3 +118,38 @@ export async function createIdea(token: string, input: CreateIdeaInput, opts?: E
   const data = await executeGraphQL<{ createIdea: RawCreateIdeaPayload }>(token, CREATE_IDEA_MUTATION, { input }, { ...opts, mutation: true });
   return interpretCreateIdeaPayload(data.createIdea);
 }
+
+export type SaveIdeaOnceResult =
+  | { status: "already_saved"; ideaId: string }
+  | { status: "created"; ideaId: string }
+  | { status: "failed"; errorType: CreateIdeaErrorType; message: string };
+
+/**
+ * Duplicate protection: when an Idea ID is already recorded for the item,
+ * Buffer is not called. Otherwise creates the idea and records the returned ID.
+ * Exported for unit tests.
+ */
+export async function saveIdeaOnce(deps: {
+  findRecordedIdeaId: () => Promise<string | null>;
+  create: () => Promise<CreateIdeaResult>;
+  record: (ideaId: string) => Promise<void>;
+}): Promise<SaveIdeaOnceResult> {
+  const existing = await deps.findRecordedIdeaId();
+  if (existing) return { status: "already_saved", ideaId: existing };
+  const result = await deps.create();
+  if (!result.ok) return { status: "failed", errorType: result.errorType, message: result.message };
+  await deps.record(result.idea.id);
+  return { status: "created", ideaId: result.idea.id };
+}
+
+export const IDEA_LOG_ACTION = "buffer_idea_created";
+
+/** Maps discovery ID → recorded Buffer Idea ID from activity log rows. Exported for unit tests. */
+export function recordedIdeaIds(rows: { resource_id: string | null; metadata: unknown }[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const row of rows) {
+    const ideaId = (row.metadata as { buffer_idea_id?: unknown } | null)?.buffer_idea_id;
+    if (row.resource_id && typeof ideaId === "string" && ideaId && !out[row.resource_id]) out[row.resource_id] = ideaId;
+  }
+  return out;
+}

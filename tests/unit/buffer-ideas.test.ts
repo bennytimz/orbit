@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BufferApiError } from "@/lib/buffer/client";
-import { CREATE_IDEA_MUTATION, buildDiscoveryIdeaContent, createIdea, interpretCreateIdeaPayload, shortSummary } from "@/lib/buffer/ideas";
+import { CREATE_IDEA_MUTATION, buildDiscoveryIdeaContent, createIdea, interpretCreateIdeaPayload, recordedIdeaIds, saveIdeaOnce, shortSummary } from "@/lib/buffer/ideas";
 import { BUFFER_SCOPES } from "@/lib/buffer/oauth";
 
 describe("interpretCreateIdeaPayload", () => {
@@ -94,5 +94,53 @@ describe("createIdea", () => {
 describe("scopes", () => {
   it("requests ideas:write for createIdea", () => {
     expect(BUFFER_SCOPES).toContain("ideas:write");
+  });
+});
+
+describe("duplicate protection", () => {
+  it("refuses a repeat save without calling Buffer", async () => {
+    const create = vi.fn();
+    const record = vi.fn();
+    const r = await saveIdeaOnce({ findRecordedIdeaId: async () => "idea_existing", create, record });
+    expect(r).toEqual({ status: "already_saved", ideaId: "idea_existing" });
+    expect(create).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it("creates and records once when nothing is recorded", async () => {
+    const create = vi.fn(async () => ({ ok: true as const, idea: { id: "idea_new", organizationId: "org", createdAt: 1 } }));
+    const record = vi.fn(async () => {});
+    expect(await saveIdeaOnce({ findRecordedIdeaId: async () => null, create, record })).toEqual({ status: "created", ideaId: "idea_new" });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(record).toHaveBeenCalledWith("idea_new");
+  });
+
+  it("records nothing when Buffer does not confirm", async () => {
+    const record = vi.fn();
+    const r = await saveIdeaOnce({
+      findRecordedIdeaId: async () => null,
+      create: async () => ({ ok: false, errorType: "LimitReachedError", message: "limit" }),
+      record,
+    });
+    expect(r).toEqual({ status: "failed", errorType: "LimitReachedError", message: "limit" });
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it("does not call Buffer when the saved-state lookup fails", async () => {
+    const create = vi.fn();
+    await expect(saveIdeaOnce({ findRecordedIdeaId: async () => { throw new Error("db down"); }, create, record: vi.fn() })).rejects.toThrow("db down");
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("maps recorded log rows to Idea IDs, keeping the first per discovery", () => {
+    expect(
+      recordedIdeaIds([
+        { resource_id: "d1", metadata: { buffer_idea_id: "idea_a" } },
+        { resource_id: "d1", metadata: { buffer_idea_id: "idea_b" } },
+        { resource_id: "d2", metadata: {} },
+        { resource_id: null, metadata: { buffer_idea_id: "idea_c" } },
+        { resource_id: "d3", metadata: null },
+      ]),
+    ).toEqual({ d1: "idea_a" });
   });
 });

@@ -8,6 +8,7 @@ import { DiscoverPanel } from "@/components/radar/discover-panel";
 import { DiscoveryCard, type DiscoveryWithSources } from "@/components/radar/discovery-card";
 import { RadarFilters } from "@/components/radar/radar-filters";
 import type { ResearchFeed } from "@/types/domain";
+import { findSavedIdeaIds } from "@/lib/buffer/idea-log";
 
 export const metadata: Metadata = { title: "Radar" };
 
@@ -42,6 +43,7 @@ export default async function RadarPage({
     supabase.from("profiles").select("timezone").eq("user_id", userId).single(),
   ]);
   const discoveries = (data ?? []) as unknown as DiscoveryWithSources[];
+  const savedIdeas = await findSavedIdeaIds(supabase, userId, discoveries.map((d) => d.id)).catch(() => ({}) as Record<string, string>);
   const status = integrations();
   const tz = (profile?.timezone as string) ?? "UTC";
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
@@ -69,7 +71,7 @@ export default async function RadarPage({
           <>
             <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
               {discoveries.map((d) => (
-                <DiscoveryCard key={d.id} discovery={d} timeZone={tz} />
+                <DiscoveryCard key={d.id} discovery={d} timeZone={tz} savedIdeaId={savedIdeas[d.id] ?? null} />
               ))}
             </div>
             {totalPages > 1 ? (

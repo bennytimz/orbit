@@ -16,7 +16,7 @@ export type DiscoveryWithSources = Discovery & {
   discovery_sources: { research_sources: Pick<ResearchSource, "id" | "url" | "title" | "publisher" | "published_at" | "published_at_text" | "provider"> | null }[];
 };
 
-export function DiscoveryCard({ discovery: d, timeZone }: { discovery: DiscoveryWithSources; timeZone: string }) {
+export function DiscoveryCard({ discovery: d, timeZone, savedIdeaId = null }: { discovery: DiscoveryWithSources; timeZone: string; savedIdeaId?: string | null }) {
   const status = useAction(setDiscoveryStatus, { silentSuccess: true });
   const sources = d.discovery_sources.map((s) => s.research_sources).filter((s): s is NonNullable<typeof s> => !!s);
   const newest = sources.map((s) => s.published_at).filter(Boolean).sort().at(-1) ?? null;
@@ -73,7 +73,7 @@ export function DiscoveryCard({ discovery: d, timeZone }: { discovery: Discovery
             </a>
           ) : null}
           <div className="ml-auto flex gap-1">
-            <SaveToBufferIdeasButton discoveryId={d.id} compact />
+            <SaveToBufferIdeasButton discoveryId={d.id} savedIdeaId={savedIdeaId} compact />
             <Button variant="ghost" size="icon-sm" disabled={status.pending} aria-label={saved ? "Unsave" : "Save"} onClick={() => status.run(d.id, saved ? "new" : "saved")}>
               {saved ? <BookmarkCheck className="text-primary" /> : <Bookmark />}
             </Button>
