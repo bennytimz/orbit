@@ -25,11 +25,11 @@ const GITHUB_URL = "https://github.com/Bennytimz/orbit";
 const VIDEO_ID = "P6GB9BwjOqU";
 
 const STEPS = [
-  { icon: Radar, title: "Radar", body: "Paste links, search the web or follow feeds. ORBIT scores each development against your interests and shows why." },
+  { icon: Radar, title: "Radar", body: "Works from URLs you paste and RSS feeds you follow. ORBIT scores each development against your interests and shows why." },
   { icon: BookOpenCheck, title: "Research", body: "A source-backed report with claims, dates and uncertainties. Quoted passages are checked word for word against the source text." },
   { icon: MessageSquareQuote, title: "Your perspective", body: "Answer a few pointed questions by text or voice. Your answers are the only source of opinions in what gets written." },
   { icon: PenLine, title: "Studio", body: "Drafts adapted per platform: a LinkedIn post and an X thread, not one text pasted twice. Edit, version and compare." },
-  { icon: ShieldCheck, title: "Guardian checks", body: "Rule checks and an AI review flag unsupported claims, platform limits and voice drift, each with its reasoning." },
+  { icon: ShieldCheck, title: "Guardian checks", body: "Fixed rule checks plus an AI review by Gemini Flash flag unsupported claims, platform limits and voice drift, each with its reasoning. Results are suggestions, not guarantees." },
   { icon: Send, title: "Buffer", body: "Pick channels, choose draft, queue or a time, approve, and ORBIT creates the real posts in your Buffer account." },
 ];
 
@@ -84,7 +84,9 @@ export default async function Home() {
         </section>
 
         <section id="demo" aria-labelledby="demo-title" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-20">
-          <h2 id="demo-title" className="sr-only">Demo video</h2>
+          <h2 id="demo-title" className="mb-4 flex items-center justify-center gap-2 text-lg font-medium">
+            <PlayCircle className="size-5 text-primary" aria-hidden /> Watch the demo
+          </h2>
           <div className="aspect-video overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-primary/5">
             <iframe
               className="size-full"
@@ -139,6 +141,10 @@ export default async function Home() {
               <p className="mt-3 text-muted-foreground">
                 Publishing goes through Buffer&rsquo;s official GraphQL API. Nothing is simulated: every result you see came back from Buffer.
               </p>
+              <p className="mt-4 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Channels:</span> LinkedIn and X are tested. Other text channels work through the same flow.
+                Instagram is blocked until media upload is added.
+              </p>
             </div>
             <ul className="space-y-3">
               {BUFFER_FEATURES.map((f) => (
@@ -148,6 +154,11 @@ export default async function Home() {
                 </li>
               ))}
             </ul>
+            <p className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-sm leading-relaxed lg:col-start-2">
+              <span className="font-medium text-success">Verified live:</span> real Buffer drafts created from this app (LinkedIn post{" "}
+              <code className="font-mono text-xs">6af7e2ca97efac0554da340b</code>, X thread{" "}
+              <code className="font-mono text-xs">6af7e2ea81e1228421e23df6</code>), connected via OAuth.
+            </p>
           </div>
         </section>
 
