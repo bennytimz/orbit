@@ -3,7 +3,7 @@
 ## Live verification outstanding (no credentials in this environment)
 - **Supabase**: The migration (`supabase/migrations/20261114000000_orbit_core.sql`) has not been applied to a live database. Local `supabase start` was attempted, but the OS killed it for low memory. RLS policies are therefore untested against a real Postgres.
 - **AI provider (Gemini free tier)**: On 2026-11-14, voice analysis, URL discovery, the research report, LinkedIn and X generation, and Guardian each ran live once on `gemini-3.5-flash`, all with schema-valid output (see BUILD_PROGRESS.md). That is one sample per prompt, so quality across many topics has not been measured. RSS discovery, AI rewrite and adaptation, perspective questions and preference analysis haven't run live yet.
-- **Buffer**: The personal-API-key path is verified live: `account`, `channels`, `posts`, and `createPost` in draft mode, plus idempotent re-submission. Not yet run live: OAuth (no client credentials), queue and custom scheduling, and the error paths of real `createPost` calls.
+- **Buffer**: The personal-API-key path is verified live: `account`, `channels`, `posts`, and `createPost` in draft mode, plus idempotent re-submission. OAuth (Authorization Code + PKCE) was verified live on production on 2026-11-14: consent, callback, token exchange, and channel and post retrieval all worked. Not yet run live: queue and custom scheduling, and the error paths of real `createPost` calls.
 - **Deepgram**: Transcription is untested live.
 - **End-to-end tests**: There are no browser E2E tests. Live runs call engine and server code directly and are not checked in, and the UI has not been clicked through against live services.
 

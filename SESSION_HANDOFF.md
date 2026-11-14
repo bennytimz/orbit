@@ -31,7 +31,7 @@ _Session ended 2026-11-14._
   The Buffer ledger still holds only the one LinkedIn draft. In dev mode each page compiles on first visit and takes about 10 s, so judge speed on a production build.
 - **X threads:** sent to Buffer as `metadata.twitter.thread` (schema-introspected, unit-tested). No live thread post has been created yet.
 - **Not verified live:**
-  - Buffer OAuth and scheduling
+  - Buffer scheduling (OAuth verified live on production on 2026-11-14)
   - a real X thread post
   - RSS discovery
   - Deepgram transcription
@@ -55,7 +55,7 @@ The schema is applied by hand: paste `supabase/migrations/20261114000000_orbit_c
 - `TRANSCRIPTION_PROVIDER`
 
 Still missing:
-- **Optional:** `BUFFER_CLIENT_ID` / `BUFFER_CLIENT_SECRET` (OAuth; redirect `${APP_URL}/api/buffer/callback`), `TRANSCRIPTION_API_KEY` (Deepgram), `GEMINI_MODEL`.
+- **Optional:** `BUFFER_CLIENT_ID` / `BUFFER_CLIENT_SECRET` (OAuth; redirect `${APP_URL}/api/buffer/callback`; set on Vercel Production along with `BUFFER_REDIRECT_URI`, and the live site is connected via OAuth), `TRANSCRIPTION_API_KEY` (Deepgram), `GEMINI_MODEL`.
 - **For deployment:** `NEXT_PUBLIC_APP_URL`.
 
 ## Where things are

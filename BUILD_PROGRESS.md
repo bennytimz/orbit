@@ -7,7 +7,7 @@ The whole mandatory workflow is implemented in code and builds:
 
 Radar → research report → Develop My Perspective (text/voice) → Studio generation → Guardian → campaign → Buffer connection → approved Buffer post/draft/schedule
 
-`tsc`, `eslint`, `next build`, and 102 unit tests pass. **On 2026-11-14 the core path was exercised live** against real Supabase, Gemini and Buffer, up to a real Buffer draft (see Test status). What hasn't been run live: the browser UI (all live runs called engine/server code directly), OAuth, scheduling, campaigns, and voice transcription. See KNOWN_LIMITATIONS.md.
+`tsc`, `eslint`, `next build`, and 102 unit tests pass. **On 2026-11-14 the core path was exercised live** against real Supabase, Gemini and Buffer, up to a real Buffer draft (see Test status). What hasn't been run live: the browser UI (all live runs called engine/server code directly), scheduling, campaigns, and voice transcription. See KNOWN_LIMITATIONS.md.
 
 ## Completed
 | Area | What exists | Verified by |
@@ -64,7 +64,7 @@ Radar → research report → Develop My Perspective (text/voice) → Studio gen
 
 ## Next tasks (priority order)
 1. Click through the same path in the browser UI on Node 22 (`npm run dev`), including the campaign step and the publish confirmation dialog.
-2. Buffer: test a scheduled post (`customScheduled`) and OAuth (needs `BUFFER_CLIENT_ID`/`SECRET`).
+2. Buffer: test a scheduled post (`customScheduled`). OAuth was verified live on production on 2026-11-14.
 3. Add RSS discovery to the live run, then keep the live scripts as an opt-in `npm run test:live`.
 4. Write a Playwright E2E for the demo path.
 5. Deploy to Vercel (Node 22), set env vars, and register the production OAuth redirect URI.
