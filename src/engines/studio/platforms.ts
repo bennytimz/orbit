@@ -170,8 +170,18 @@ export function platformForService(service: string): Platform | null {
   return null;
 }
 
-/** Text actually sent to a platform: threads are joined only where supported. */
+/** First (or only) post of a piece of content. */
 export function publishableText(body: string, threadParts: string[] | null): string {
   if (threadParts && threadParts.length > 0) return threadParts[0];
   return body;
+}
+
+/**
+ * Posts actually sent to a channel. X threads go to Buffer as a real thread (every part);
+ * on any other platform only the first part is sent.
+ */
+export function publishableParts(body: string, threadParts: string[] | null, platform: Platform | null): string[] {
+  const parts = (threadParts ?? []).map((p) => p.trim()).filter(Boolean);
+  if (platform === "x" && parts.length > 1) return parts;
+  return [publishableText(body, threadParts)];
 }

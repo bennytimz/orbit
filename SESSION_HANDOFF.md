@@ -3,7 +3,7 @@
 _Session ended 2026-11-14._
 
 ## State
-- **Branch:** `feat/orbit-core` (branched from `main`). Everything is committed. Commits must use only the configured git user (Bennytimz), with no co-author lines; see the user-level CLAUDE.md.
+- **Branch:** `main`, with `feat/orbit-core` fast-forward merged into it. Both branches are pushed to `origin` (github.com/bennytimz/orbit). Commits must use only the configured git user (Bennytimz), with no co-author lines; see the user-level CLAUDE.md.
 - **Health:** typecheck, lint, 102 unit tests, and production build all pass.
 - **Node:** **Node 22 is required** (`.nvmrc`, `package.json` `engines`). On Node 20, supabase-js throws "native WebSocket not found" at runtime. Node 22.23.5 is installed via nvm-windows but is not active by default; run `nvm use 22`.
 - **Live services (all verified 2026-11-14):**
@@ -18,10 +18,21 @@ _Session ended 2026-11-14._
     - ledger row `a7e2ed0c-f261-4fad-96ce-27800a675f6b`
     - It is still a draft in Buffer and has not been published or scheduled.
 - **Demo account in Supabase:** `orbit-demo-1794623434761@example.com`. Its password is not in the repo; it is in the session scratchpad file `live/flow-state.json`, or reset it in Supabase → Auth. It holds the discovery, report, perspective, two drafts, Guardian reports and the Buffer connection above. You can sign in as it to see the results in the UI, or delete it from Supabase → Auth.
+- **UI click-through (2026-11-14, Node 22 dev server):** completed as the demo account, stopping at the final confirmation without sending:
+  - sign-in and Command Center;
+  - Radar ("From URLs" default);
+  - research report;
+  - Develop My Perspective (AI questions) and a typed answer;
+  - Studio editor (X thread);
+  - Guardian re-run;
+  - creating a campaign and adding both drafts;
+  - the publish dialog with the thread preview, then the final confirmation.
+
+  The Buffer ledger still holds only the one LinkedIn draft. In dev mode each page compiles on first visit and takes about 10 s, so judge speed on a production build.
+- **X threads:** sent to Buffer as `metadata.twitter.thread` (schema-introspected, unit-tested). No live thread post has been created yet.
 - **Not verified live:**
-  - the browser UI click-through
   - Buffer OAuth and scheduling
-  - campaigns
+  - a real X thread post
   - RSS discovery
   - Deepgram transcription
 
@@ -60,6 +71,9 @@ Still missing:
 - `next build` on Windows sometimes fails with `ENOTEMPTY ... .next\...`. Re-running fixes it.
 
 ## Exact next action
-1. Run `nvm use 22 && npm run dev`.
-2. Sign up a fresh user and click through the demo path in CLAUDE.md §17: Radar "From URLs" → report → Develop My Perspective → Studio → Guardian → campaign → Publishing (paste the Buffer API key) → publish confirmation, using draft mode.
-3. Fix anything the UI exposes that the direct engine runs could not.
+1. Deploy to Vercel:
+   - Set the Node.js version to 22.x.
+   - Set the env vars from the Vercel list in the README.
+   - Add `${NEXT_PUBLIC_APP_URL}/auth/callback` to Supabase Auth → URL configuration.
+2. Smoke-test the deployed app on the same demo path, using draft mode only.
+3. Optional: with explicit approval, create one live X thread draft to confirm `metadata.twitter.thread` end to end.

@@ -116,6 +116,8 @@ export interface CreatePostInput {
   saveToDraft?: boolean;
   aiAssisted?: boolean;
   source?: string;
+  /** X threads: every part, including the first (top-level `text` repeats part 1). */
+  metadata?: { twitter: { thread: { text: string }[] } };
 }
 
 export type CreatePostResult =

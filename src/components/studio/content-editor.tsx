@@ -176,7 +176,7 @@ export function ContentEditor({
                 {parts.map((p, i) => (
                   <div key={i} className="rounded-lg border border-border p-2">
                     <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Post {i + 1}{i === 0 ? " (sent to Buffer)" : ""}</span>
+                      <span>Post {i + 1}</span>
                       <div className="flex items-center gap-2">
                         <CharCount text={p} platform={asset.platform} />
                         <Button variant="ghost" size="icon-xs" aria-label={`Remove post ${i + 1}`} onClick={() => setParts(parts.length <= 2 ? null : parts.filter((_, j) => j !== i))}>

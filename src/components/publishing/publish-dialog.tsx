@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { GuardianPill, Notice, OperationPill, Pill } from "@/components/shared";
 import { useAction } from "@/hooks/use-action";
 import { publishContent } from "@/app/actions/publishing";
-import { PLATFORMS, countCharacters, platformForService, publishableText } from "@/engines/studio/platforms";
+import { PLATFORMS, countCharacters, platformForService, publishableParts, publishableText } from "@/engines/studio/platforms";
 import { formatDateTime, utcToZonedLocal, zonedLocalToUtc } from "@/lib/format";
 import type { BufferChannelRow, ContentAsset, GuardianIssue, PublishMode } from "@/types/domain";
 import type { ChannelOutcome } from "@/engines/publisher/publish";
@@ -76,8 +76,16 @@ export function PublishDialog({
       const p = platformForService(ch.service);
       if (!p) continue;
       const spec = PLATFORMS[p];
-      if (spec.requiresMedia) out[id] = `${spec.label} requires media; ORBIT does not attach media yet.`;
-      else if (spec.maxChars && countCharacters(text, p) > spec.maxChars) out[id] = `Too long for ${spec.label} (${countCharacters(text, p)}/${spec.maxChars}).`;
+      if (spec.requiresMedia) {
+        out[id] = `${spec.label} requires media; ORBIT does not attach media yet.`;
+        continue;
+      }
+      const parts = publishableParts(asset.body, asset.thread_parts, p);
+      const tooLong = parts.findIndex((part) => spec.maxChars !== null && countCharacters(part, p) > spec.maxChars);
+      if (tooLong >= 0) {
+        const count = countCharacters(parts[tooLong], p);
+        out[id] = `${parts.length > 1 ? `Thread post ${tooLong + 1} is too long` : "Too long"} for ${spec.label} (${count}/${spec.maxChars}).`;
+      }
     }
     return out;
   }, [selected, channels, text]);
@@ -268,8 +276,27 @@ export function PublishDialog({
               <dt className="text-muted-foreground">Approval</dt>
               <dd>Your approval on this screen</dd>
             </dl>
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-background p-3 text-sm whitespace-pre-wrap">{text}</div>
-            {isThread ? <Notice tone="warning">This is a thread. Buffer receives only the first post; the rest stays in ORBIT.</Notice> : null}
+            {isThread ? (
+              <ol className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-border bg-background p-3 text-sm">
+                {asset.thread_parts!.map((part, i) => (
+                  <li key={i} className="whitespace-pre-wrap">
+                    <span className="mr-2 text-xs text-muted-foreground tabular-nums">
+                      {i + 1}/{asset.thread_parts!.length}
+                    </span>
+                    {part}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-background p-3 text-sm whitespace-pre-wrap">{text}</div>
+            )}
+            {isThread ? (
+              <Notice>
+                {selected.some((id) => platformForService(channels.find((c) => c.channel_id === id)?.service ?? "") !== "x")
+                  ? `X channels receive all ${asset.thread_parts!.length} posts as one thread. Other channels receive only the first post.`
+                  : `Buffer receives all ${asset.thread_parts!.length} posts as one X thread.`}
+              </Notice>
+            ) : null}
             <DialogFooter>
               <Button variant="ghost" onClick={() => setStep("configure")} disabled={publish.pending}>
                 Back

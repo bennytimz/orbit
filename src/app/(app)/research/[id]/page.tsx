@@ -11,7 +11,7 @@ import { RelevanceMeter } from "@/components/radar/relevance-meter";
 import { ReportView } from "@/components/research/report-view";
 import { GenerateReportButton } from "@/components/research/generate-report-button";
 import { PerspectivePanel } from "@/components/research/perspective-panel";
-import { formatDate, formatDateTime, hostname } from "@/lib/format";
+import { formatCalendarDate, formatDate, formatDateTime, hostname } from "@/lib/format";
 import type { Discovery, Perspective, ResearchReport, ResearchSource } from "@/types/domain";
 
 export const metadata: Metadata = { title: "Research" };
@@ -45,7 +45,7 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
           <span className="flex flex-wrap items-center gap-2 normal-case tracking-normal">
             <Pill tone="accent">{CATEGORY_LABELS[discovery.category]}</Pill>
             <span>Discovered {formatDate(discovery.discovered_at, tz)}</span>
-            {discovery.event_date ? <span>· Event date: {discovery.event_date}</span> : <span>· Event date not stated</span>}
+            {discovery.event_date ? <span>· Event date: {formatCalendarDate(discovery.event_date)}</span> : <span>· Event date not stated</span>}
           </span>
         }
         title={discovery.title}

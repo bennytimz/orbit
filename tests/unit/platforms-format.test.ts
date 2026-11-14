@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { countCharacters, countEmoji, countHashtags, platformForService, publishableText } from "@/engines/studio/platforms";
-import { hostname, titleCase, utcToZonedLocal, zonedLocalToUtc } from "@/lib/format";
+import { countCharacters, countEmoji, countHashtags, platformForService, publishableParts, publishableText } from "@/engines/studio/platforms";
+import { formatCalendarDate, hostname, titleCase, utcToZonedLocal, zonedLocalToUtc } from "@/lib/format";
 
 describe("platform character counting", () => {
   it("counts X links as 23 characters", () => {
@@ -27,9 +27,16 @@ describe("platform character counting", () => {
     expect(platformForService("unknown-network")).toBeNull();
   });
 
-  it("sends only the first thread part", () => {
+  it("uses the first thread part as the post text", () => {
     expect(publishableText("a\n\nb", ["a", "b"])).toBe("a");
     expect(publishableText("body", null)).toBe("body");
+  });
+
+  it("sends every thread part to X, and only the first elsewhere", () => {
+    expect(publishableParts("a\n\nb", ["a", " b ", ""], "x")).toEqual(["a", "b"]);
+    expect(publishableParts("a\n\nb", ["a", "b"], "linkedin")).toEqual(["a"]);
+    expect(publishableParts("body", null, "x")).toEqual(["body"]);
+    expect(publishableParts("body", ["only"], "x")).toEqual(["only"]);
   });
 });
 
@@ -55,5 +62,14 @@ describe("timezone conversion", () => {
   it("formats helpers", () => {
     expect(titleCase("add_to_queue")).toBe("Add To Queue");
     expect(hostname("https://www.example.com/x")).toBe("example.com");
+  });
+});
+
+describe("formatCalendarDate", () => {
+  it("formats full, month and year dates without shifting the day", () => {
+    expect(formatCalendarDate("2025-09-25")).toBe("Sep 25, 2025");
+    expect(formatCalendarDate("2025-09")).toBe("Sep 2025");
+    expect(formatCalendarDate("2025")).toBe("2025");
+    expect(formatCalendarDate("late 2025")).toBe("late 2025");
   });
 });

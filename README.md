@@ -41,6 +41,9 @@ Open http://localhost:3000. If configuration is missing, ORBIT redirects to `/se
 | `BUFFER_TOKEN_ENCRYPTION_KEY` | AES-256-GCM key for stored Buffer tokens (32 bytes, base64/hex) |
 | `BUFFER_CLIENT_ID`, `BUFFER_CLIENT_SECRET` | Optional: Buffer OAuth. Without them, use a personal API key |
 | `TRANSCRIPTION_API_KEY` | Optional: Deepgram transcription |
+| `NEXT_PUBLIC_APP_URL` | Required in production: the public URL (OAuth redirect, auth links). Defaults to `http://localhost:3000` |
+
+On Vercel, set the Node.js version to 22.x. supabase-js fails at runtime on Node 20.
 
 Register the Buffer OAuth redirect URI exactly as `${NEXT_PUBLIC_APP_URL}/api/buffer/callback`.
 

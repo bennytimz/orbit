@@ -27,10 +27,10 @@ describe("Guardian rule checks", () => {
     expect(types({ platform: "x", body: "a".repeat(280) })).not.toContain("platform_constraint:blocking");
   });
 
-  it("checks each thread part separately and notes threads", () => {
+  it("checks each thread part separately, without a first-post-only note", () => {
     const issues = runRuleChecks({ ...base, platform: "x", body: "x", threadParts: ["short", "b".repeat(300)] });
     expect(issues.find((i) => i.severity === "blocking")?.title).toMatch(/Thread post 2/);
-    expect(issues.some((i) => i.severity === "info" && /only the first post/.test(i.title))).toBe(true);
+    expect(issues.some((i) => /first post/i.test(i.title))).toBe(false);
   });
 
   it("flags platforms that require media", () => {

@@ -14,6 +14,7 @@ export function AddToCampaign({ assetId, campaigns, currentCampaignId }: { asset
   const [campaignId, setCampaignId] = useState(campaigns.find((c) => c.id !== currentCampaignId)?.id ?? "");
   const add = useAction(addAssetsToCampaign);
   const current = campaigns.find((c) => c.id === currentCampaignId);
+  const others = campaigns.filter((c) => c.id !== currentCampaignId);
 
   return (
     <section className="rounded-xl border border-border bg-card p-4">
@@ -25,10 +26,10 @@ export function AddToCampaign({ assetId, campaigns, currentCampaignId }: { asset
           In <Link href={`/campaigns/${current.id}`} className="text-primary hover:underline">{current.name}</Link>
         </p>
       ) : null}
-      {campaigns.length ? (
+      {others.length ? (
         <div className="flex gap-2">
-          <NativeSelect aria-label="Campaign" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
-            {campaigns.map((c) => (
+          <NativeSelect aria-label={current ? "Also add to campaign" : "Campaign"} value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
+            {others.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -38,7 +39,7 @@ export function AddToCampaign({ assetId, campaigns, currentCampaignId }: { asset
             {add.pending ? <Loader2 className="animate-spin" /> : null} Add
           </Button>
         </div>
-      ) : (
+      ) : current ? null : (
         <p className="text-sm text-muted-foreground">
           No campaigns yet. <Link href="/campaigns" className="text-primary hover:underline">Create one</Link>
         </p>

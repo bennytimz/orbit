@@ -92,3 +92,19 @@ export function hostname(url: string): string {
     return url;
   }
 }
+
+/**
+ * Formats a calendar date the model reported ("2025-09-25", "2025-09" or "2025").
+ * These are dates, not instants, so they are formatted in UTC to avoid shifting the day.
+ * Anything else (e.g. "late 2025") is returned unchanged.
+ */
+export function formatCalendarDate(value: string): string {
+  const m = value.trim().match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  if (!m) return value;
+  const [, y, mo, d] = m;
+  const date = new Date(Date.UTC(Number(y), mo ? Number(mo) - 1 : 0, d ? Number(d) : 1));
+  if (Number.isNaN(date.getTime())) return value;
+  if (d) return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+  if (mo) return date.toLocaleDateString("en-US", { year: "numeric", month: "short", timeZone: "UTC" });
+  return y;
+}

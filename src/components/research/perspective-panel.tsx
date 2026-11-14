@@ -68,11 +68,16 @@ export function PerspectivePanel({
             <li key={q.question}>
               <button
                 type="button"
-                onClick={() => setActive(q.question)}
+                aria-pressed={active === q.question}
+                onClick={() => {
+                  setActive(q.question);
+                  const box = document.getElementById("perspective-answer");
+                  box?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  box?.focus({ preventScroll: true });
+                }}
                 className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${active === q.question ? "border-primary/60 bg-primary/10" : "border-border hover:border-primary/30"} ${answered.has(q.question) ? "opacity-60" : ""}`}
               >
                 {q.question}
-                <span className="mt-0.5 block text-xs text-muted-foreground">{q.why}</span>
               </button>
             </li>
           ))}

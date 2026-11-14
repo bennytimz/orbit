@@ -127,18 +127,6 @@ export function runRuleChecks(input: RuleInput): RuleIssue[] {
     });
   }
 
-  if (input.threadParts && input.threadParts.length > 1) {
-    issues.push({
-      issue_type: "platform_constraint",
-      severity: "info",
-      title: "Thread: only the first post is sent to Buffer",
-      explanation: "ORBIT currently sends a single post per channel. The remaining thread posts must be added manually in Buffer or on X.",
-      excerpt: null,
-      recommended_action: "Review the first post so it stands alone, or condense the thread into one post.",
-      evidence: [],
-    });
-  }
-
   if (spec.requiresMedia) {
     issues.push({
       issue_type: "missing_media",

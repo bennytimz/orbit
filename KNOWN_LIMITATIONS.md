@@ -12,7 +12,7 @@
 - **Free-tier quotas**: Gemini free-tier requests are rate-limited per minute and per day, and they surface as "rate limit or free-tier quota reached". Google's free-tier terms allow submitted content to be used to improve their products, so do not process confidential material on the free tier.
 - **Model availability**: Google retires model aliases for new users (e.g. `gemini-2.5-flash`). If the default stops working, set `GEMINI_MODEL`.
 - **Media**: No image or video upload, and nothing is attached to Buffer posts. Instagram (and any other media-required channel) is blocked at preflight. Studio produces a clearly labelled *visual brief* instead of images. Image generation is not implemented.
-- **Threads**: X threads can be drafted, but only the first post is sent to Buffer.
+- **Threads**: X threads go to Buffer as `metadata.twitter.thread` with every part (top-level `text` is part 1), following the live schema introspected on 2026-11-14 (`TwitterPostMetadataInput.thread: [ThreadedPostInput!]`). This is unit-tested, but no live thread post has been created yet. On non-X channels only the first part is sent. The ledger's `text_sent` records part 1, the text Buffer stores at top level.
 - **Content Items** (Buffer, experimental) are not used. Each channel is a separate `createPost`.
 - **Editing or deleting Buffer posts** is not implemented. Changing a campaign date changes only ORBIT's plan.
 - **Analytics**: No engagement metrics are available, because Buffer's public API does not expose them. There is no manual or CSV metric import yet.

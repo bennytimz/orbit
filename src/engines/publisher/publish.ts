@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { BufferApiError } from "@/lib/buffer/client";
 import { getAccessToken, markNeedsReauth } from "@/lib/buffer/credentials";
 import { createPost, fetchChannels, fetchPosts, type CreatePostInput } from "@/lib/buffer/operations";
-import { PLATFORMS, countCharacters, platformForService, publishableText } from "@/engines/studio/platforms";
+import { PLATFORMS, countCharacters, platformForService, publishableParts, publishableText } from "@/engines/studio/platforms";
 import type { BufferChannelRow, BufferPublication, ContentAsset, GuardianIssue, PublishMode } from "@/types/domain";
 
 /** Re-reads channels from Buffer for the selected organization and stores them. */
@@ -119,17 +119,22 @@ export function preflight(
     if (platform) {
       const spec = PLATFORMS[platform];
       if (spec.requiresMedia) problems.push({ channelId: id, message: `${spec.label} requires an image or video, and ORBIT does not attach media yet.` });
-      if (spec.maxChars && countCharacters(text, platform) > spec.maxChars) {
-        problems.push({ channelId: id, message: `Too long for ${spec.label} (${countCharacters(text, platform)}/${spec.maxChars}).` });
-      }
+      const parts = publishableParts(asset.body, asset.thread_parts, platform);
+      parts.forEach((part, i) => {
+        const count = countCharacters(part, platform);
+        if (spec.maxChars && count > spec.maxChars) {
+          problems.push({ channelId: id, message: `${parts.length > 1 ? `Thread post ${i + 1} is too long` : "Too long"} for ${spec.label} (${count}/${spec.maxChars}).` });
+        }
+      });
     }
   }
   return problems;
 }
 
-export function buildCreateInput(text: string, channelId: string, mode: PublishMode, dueAt: string | null, aiAssisted: boolean): CreatePostInput {
+/** `parts` holds one entry for a single post, or every part of an X thread. */
+export function buildCreateInput(parts: string[], channelId: string, mode: PublishMode, dueAt: string | null, aiAssisted: boolean): CreatePostInput {
   const input: CreatePostInput = {
-    text,
+    text: parts[0] ?? "",
     channelId,
     schedulingType: "automatic",
     mode: mode === "draft" ? "addToQueue" : mode,
@@ -138,6 +143,7 @@ export function buildCreateInput(text: string, channelId: string, mode: PublishM
   };
   if (mode === "draft") input.saveToDraft = true;
   if (mode === "customScheduled" && dueAt) input.dueAt = new Date(dueAt).toISOString();
+  if (parts.length > 1) input.metadata = { twitter: { thread: parts.map((text) => ({ text })) } };
   return input;
 }
 
@@ -209,7 +215,8 @@ export async function publishToBuffer(
     }
 
     try {
-      const result = await createPost(token, buildCreateInput(text, channelId, req.mode, req.dueAt, asset.ai_generated));
+      const parts = publishableParts(asset.body, asset.thread_parts, platformForService(channel.service));
+      const result = await createPost(token, buildCreateInput(parts, channelId, req.mode, req.dueAt, asset.ai_generated));
       if (result.ok) {
         await admin
           .from("buffer_publications")

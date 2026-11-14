@@ -28,6 +28,15 @@ Radar → research report → Develop My Perspective (text/voice) → Studio gen
 | Memory / Settings | Inspect/edit/delete identity, voice, preferences, knowledge; integration status, privacy, account deletion | typecheck |
 
 ## Test status
+- **2026-11-14 UI click-through** (Node 22 dev server, demo account):
+  - The full demo path works in the browser, up to the final publish confirmation; nothing was sent.
+  - Fixed along the way:
+    - stale thread label;
+    - perspective question not focusing its answer box;
+    - raw event dates;
+    - redundant campaign selector;
+    - thread notice wording.
+- **X threads:** sent as `metadata.twitter.thread` (all parts; top-level `text` is part 1). Covered by unit tests: 105 tests pass.
 - **2026-11-14 live runs** (scratch scripts that call engine code directly; not checked in):
   - **RLS (22/22 pass).** With two real users:
     - The signup trigger creates the profile and the default voice profile.

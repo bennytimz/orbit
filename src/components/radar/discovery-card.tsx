@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Pill } from "@/components/shared";
 import { useAction } from "@/hooks/use-action";
 import { setDiscoveryStatus } from "@/app/actions/radar";
-import { formatDate, hostname } from "@/lib/format";
+import { formatCalendarDate, formatDate, hostname } from "@/lib/format";
 import type { Discovery, ResearchSource } from "@/types/domain";
 import { CATEGORY_LABELS } from "./labels";
 import { RelevanceMeter } from "./relevance-meter";
@@ -60,7 +60,7 @@ export function DiscoveryCard({ discovery: d, timeZone }: { discovery: Discovery
             {sources[0] ? ` · ${sources[0].publisher ?? hostname(sources[0].url)}` : ""}
           </span>
           <span>{newest ? `Published ${formatDate(newest, timeZone)}` : "Publication date unknown"}</span>
-          {d.event_date ? <span>Event: {d.event_date}</span> : null}
+          {d.event_date ? <span>Event: {formatCalendarDate(d.event_date)}</span> : null}
         </div>
         <div className="flex items-center gap-1.5">
           <Link href={`/research/${d.id}`} className={buttonVariants({ size: "sm" })}>

@@ -38,8 +38,18 @@ describe("pre-publication checks", () => {
     expect(preflight({ ...asset, body: "a".repeat(300) }, [], [{ ...channel, service: "twitter" }], req, NOW)[0].message).toMatch(/Too long/);
   });
 
-  it("checks only the first thread post against limits (what is actually sent)", () => {
-    expect(preflight({ ...asset, body: "x", thread_parts: ["short", "b".repeat(400)] }, [], [{ ...channel, service: "twitter" }], req, NOW)).toEqual([]);
+  it("checks every thread post against X limits, since all of them are sent", () => {
+    const problems = preflight({ ...asset, body: "x", thread_parts: ["short", "b".repeat(400)] }, [], [{ ...channel, service: "twitter" }], req, NOW);
+    expect(problems).toHaveLength(1);
+    expect(problems[0].message).toMatch(/Thread post 2 is too long for X/);
+    expect(preflight({ ...asset, body: "x", thread_parts: ["short", "also short"] }, [], [{ ...channel, service: "twitter" }], req, NOW)).toEqual([]);
+  });
+
+  it("sends X threads as metadata.twitter.thread with every part, top-level text = first part", () => {
+    const input = buildCreateInput(["one", "two", "three"], "c1", "draft", null, true);
+    expect(input.text).toBe("one");
+    expect(input.metadata).toEqual({ twitter: { thread: [{ text: "one" }, { text: "two" }, { text: "three" }] } });
+    expect(buildCreateInput(["solo"], "c1", "draft", null, true).metadata).toBeUndefined();
   });
 
   it("requires a future time for custom scheduling", () => {
@@ -52,12 +62,12 @@ describe("pre-publication checks", () => {
 
 describe("createPost input", () => {
   it("maps drafts to saveToDraft without a share mode of its own", () => {
-    expect(buildCreateInput("t", "c1", "draft", null, true)).toEqual({ text: "t", channelId: "c1", schedulingType: "automatic", mode: "addToQueue", saveToDraft: true, aiAssisted: true, source: "orbit" });
+    expect(buildCreateInput(["t"], "c1", "draft", null, true)).toEqual({ text: "t", channelId: "c1", schedulingType: "automatic", mode: "addToQueue", saveToDraft: true, aiAssisted: true, source: "orbit" });
   });
 
   it("includes dueAt in UTC only for custom scheduling", () => {
-    expect(buildCreateInput("t", "c1", "customScheduled", "2026-11-20T09:30:00-05:00", false).dueAt).toBe("2026-11-20T14:30:00.000Z");
-    expect(buildCreateInput("t", "c1", "addToQueue", "2026-11-20T09:30:00Z", false).dueAt).toBeUndefined();
-    expect(buildCreateInput("t", "c1", "shareNow", null, false).mode).toBe("shareNow");
+    expect(buildCreateInput(["t"], "c1", "customScheduled", "2026-11-20T09:30:00-05:00", false).dueAt).toBe("2026-11-20T14:30:00.000Z");
+    expect(buildCreateInput(["t"], "c1", "addToQueue", "2026-11-20T09:30:00Z", false).dueAt).toBeUndefined();
+    expect(buildCreateInput(["t"], "c1", "shareNow", null, false).mode).toBe("shareNow");
   });
 });
