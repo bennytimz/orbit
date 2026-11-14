@@ -3,6 +3,7 @@
 _Session ended 2026-11-14._
 
 ## State
+- **Landing page (2026-11-14):** `/` is now public for logged-out visitors (`src/proxy.ts` exact-match `/`; signed-in `/` goes to `/dashboard`). Page: `src/app/page.tsx`. Screenshots in `public/screens/` were taken read-only from the live account with Playwright (name/email hidden; the publish screenshot stops at the final confirmation, nothing was sent). Share metadata: `src/app/layout.tsx`, which uses `NEXT_PUBLIC_APP_URL` as `metadataBase`.
 - **Branch:** `main`, with `feat/orbit-core` fast-forward merged into it. Both branches are pushed to `origin` (github.com/bennytimz/orbit). Commits must use only the configured git user (Bennytimz), with no co-author lines; see the user-level CLAUDE.md.
 - **Health:** typecheck, lint, 102 unit tests, and production build all pass.
 - **Node:** **Node 22 is required** (`.nvmrc`, `package.json` `engines`). On Node 20, supabase-js throws "native WebSocket not found" at runtime. Node 22.23.5 is installed via nvm-windows but is not active by default; run `nvm use 22`.

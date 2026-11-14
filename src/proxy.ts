@@ -39,7 +39,8 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims?.sub);
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  // "/" is the public landing page for logged-out visitors (exact match only).
+  const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!signedIn && !isPublic && !pathname.startsWith("/api")) {
     const redirect = request.nextUrl.clone();
@@ -47,7 +48,7 @@ export async function proxy(request: NextRequest) {
     redirect.searchParams.set("next", pathname);
     return NextResponse.redirect(redirect);
   }
-  if (signedIn && (pathname === "/login" || pathname === "/signup")) {
+  if (signedIn && (pathname === "/" || pathname === "/login" || pathname === "/signup")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
   return response;

@@ -19,6 +19,12 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
           <OrbitMark className="mb-4 size-10" />
           <h1 className="text-xl font-semibold">{mode === "login" ? "Sign in to ORBIT" : "Create your ORBIT account"}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">Everything happening around you. Turned into something worth saying.</p>
+          <p className="mt-3 text-sm text-pretty text-muted-foreground">
+            Turn industry news into source-checked posts in your own voice, published through Buffer.{" "}
+            <Link href="/" className="text-primary hover:underline">
+              See how it works
+            </Link>
+          </p>
         </div>
         <form action={formAction} className="space-y-4 rounded-xl border border-border bg-card p-6">
           {next ? <input type="hidden" name="next" value={next} /> : null}

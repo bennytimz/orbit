@@ -24,6 +24,7 @@ Radar → research report → Develop My Perspective (text/voice) → Studio gen
 | Campaigns | CRUD, editable phases, add content, per-item phase/date/channels, phase list and month calendar, delete | typecheck |
 | Publisher | OAuth+PKCE, API-key connect, org selection, channel sync/toggle, live Buffer posts browser, pre-publication checks, final confirmation, per-channel ledger with idempotency, unknown-outcome reconciliation, disconnect | unit (PKCE, token parsing, GraphQL client, payloads, preflight, input builder) |
 | Evolution | Edit feedback capture, "Analyze my edits" → suggested preferences → accept/edit/reject, explicit preferences | typecheck |
+| Public landing (`/`) | Logged-out visitors see a landing page (hero, embedded demo video, 6-step how-it-works, real screenshots from the live account in `public/screens/`, Buffer API summary, footer); signed-in users are redirected to `/dashboard`. `/login` and `/signup` link back to `/`. OpenGraph/Twitter meta in the root layout | local `next start` (curl + Playwright), live check after deploy |
 | Command Center | Pipeline counts, top discoveries, Guardian alerts, ready-for-review, upcoming (ledger), campaigns, quick actions | typecheck |
 | Memory / Settings | Inspect/edit/delete identity, voice, preferences, knowledge; integration status, privacy, account deletion | typecheck |
 
