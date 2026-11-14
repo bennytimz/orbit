@@ -183,7 +183,7 @@ ${platformBlock}`;
           perspective_used: v.perspective_used,
           source_ids: usedSourceIds.map((id) => idToSource.get(id)!.id),
           claims: v.claims.map((c) => ({ text: c.text, source_ids: c.source_ids.filter((id) => idToSource.has(id)).map((id) => idToSource.get(id)!.id) })),
-          notes: [v.notes, countCharacters(body, platform) > (PLATFORMS[platform].maxChars ?? Infinity) ? "Draft exceeds the platform limit — shorten before publishing." : null].filter(Boolean).join(" ") || null,
+          notes: [v.notes, (threadParts ?? [body]).some((part) => countCharacters(part, platform) > (PLATFORMS[platform].maxChars ?? Infinity)) ? "Draft exceeds the platform limit — shorten before publishing." : null].filter(Boolean).join(" ") || null,
         },
       })
       .select("*")

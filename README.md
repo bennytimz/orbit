@@ -12,14 +12,17 @@ Radar → Research → Develop My Perspective → Studio → Guardian → Campai
 
 - Next.js 16 (App Router, `src/proxy.ts`), React 19, TypeScript (strict), Tailwind CSS 4, shadcn/ui (Base UI), Lucide icons
 - Supabase Postgres + Auth, with row-level security on every user-owned table
-- Anthropic Claude (`claude-opus-5-5` by default) for analysis and drafting, plus Anthropic web search as the research provider
+- Google Gemini (free tier, `gemini-3.5-flash` by default) for analysis, drafting and Guardian review; research comes from submitted URLs and RSS/Atom feeds (web search is unavailable on this provider, see TD-019)
 - Buffer GraphQL API (`https://api.buffer.com`), using OAuth 2.0 + PKCE or a personal API key
 - Deepgram for optional voice-note transcription
 - Vitest for unit tests
 
 ## Getting started
 
+Requires Node 22+ (`.nvmrc`). On Node 20, supabase-js fails at runtime.
+
 ```bash
+nvm use 22
 npm install
 cp .env.example .env.local      # fill in values (see below)
 npx supabase link --project-ref <ref> && npx supabase db push   # or: npx supabase start (local, needs Docker)
@@ -34,7 +37,7 @@ Open http://localhost:3000. If configuration is missing, ORBIT redirects to `/se
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth and database |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only: Buffer credentials, publishing ledger, account deletion |
-| `ANTHROPIC_API_KEY` | Discovery, research reports, drafting, Guardian AI review |
+| `GEMINI_API_KEY` (optional `GEMINI_MODEL`) | Discovery analysis, research reports, drafting, Guardian AI review |
 | `BUFFER_TOKEN_ENCRYPTION_KEY` | AES-256-GCM key for stored Buffer tokens (32 bytes, base64/hex) |
 | `BUFFER_CLIENT_ID`, `BUFFER_CLIENT_SECRET` | Optional: Buffer OAuth. Without them, use a personal API key |
 | `TRANSCRIPTION_API_KEY` | Optional: Deepgram transcription |

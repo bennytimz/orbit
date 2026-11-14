@@ -107,4 +107,4 @@ How calls work now:
 - **Web search:** `webResearch` throws `AIServiceError("web_search_unavailable")` immediately with a user-safe message, and makes no provider call. Radar's web-search action therefore shows a clear message, and discovery uses submitted URLs and RSS/Atom feeds (fetched directly via `safeFetch`, TD-005). Gemini's Google Search grounding was deliberately not adopted here.
 - **`src/lib/env.ts` (necessary companion change):**
   - adds `aiModel()` and `DEFAULT_GEMINI_MODEL`, plus `integrations().ai / aiProvider / aiModel / webSearch`
-  - keeps `anthropic` / `anthropicModel` as deprecated aliases, so existing feature gating and the `research_reports.model` field reflect Gemini without touching the engines
+  - the temporary `anthropic` / `anthropicModel` aliases were later removed; all callers now use `integrations().ai` and `aiModel()`, and the UI wording says Gemini/`GEMINI_API_KEY`
