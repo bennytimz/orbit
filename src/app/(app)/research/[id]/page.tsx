@@ -11,6 +11,7 @@ import { RelevanceMeter } from "@/components/radar/relevance-meter";
 import { ReportView } from "@/components/research/report-view";
 import { GenerateReportButton } from "@/components/research/generate-report-button";
 import { PerspectivePanel } from "@/components/research/perspective-panel";
+import { SaveToBufferIdeasButton } from "@/components/buffer/save-to-ideas-button";
 import { formatCalendarDate, formatDate, formatDateTime, hostname } from "@/lib/format";
 import type { Discovery, Perspective, ResearchReport, ResearchSource } from "@/types/domain";
 
@@ -56,6 +57,7 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
             <Link href={`/studio/new?discovery=${discovery.id}`} className={buttonVariants({ variant: "outline" })}>
               <PenLine /> Create content
             </Link>
+            <SaveToBufferIdeasButton discoveryId={discovery.id} />
           </>
         }
       />

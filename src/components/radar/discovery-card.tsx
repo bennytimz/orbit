@@ -10,6 +10,7 @@ import { formatCalendarDate, formatDate, hostname } from "@/lib/format";
 import type { Discovery, ResearchSource } from "@/types/domain";
 import { CATEGORY_LABELS } from "./labels";
 import { RelevanceMeter } from "./relevance-meter";
+import { SaveToBufferIdeasButton } from "@/components/buffer/save-to-ideas-button";
 
 export type DiscoveryWithSources = Discovery & {
   discovery_sources: { research_sources: Pick<ResearchSource, "id" | "url" | "title" | "publisher" | "published_at" | "published_at_text" | "provider"> | null }[];
@@ -72,6 +73,7 @@ export function DiscoveryCard({ discovery: d, timeZone }: { discovery: Discovery
             </a>
           ) : null}
           <div className="ml-auto flex gap-1">
+            <SaveToBufferIdeasButton discoveryId={d.id} compact />
             <Button variant="ghost" size="icon-sm" disabled={status.pending} aria-label={saved ? "Unsave" : "Save"} onClick={() => status.run(d.id, saved ? "new" : "saved")}>
               {saved ? <BookmarkCheck className="text-primary" /> : <Bookmark />}
             </Button>

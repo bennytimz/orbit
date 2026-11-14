@@ -13,9 +13,10 @@ export const BUFFER_TOKEN_URL = "https://auth.buffer.com/token";
  * - account:read  → account + organizations + channels
  * - posts:read    → list scheduled/draft/sent posts, reconcile ambiguous operations
  * - posts:write   → create posts and drafts
+ * - ideas:write   → createIdea (Save to Buffer Ideas)
  * - offline_access → refresh token, so the connection survives the 1h access token
  */
-export const BUFFER_SCOPES = ["account:read", "posts:read", "posts:write", "offline_access"] as const;
+export const BUFFER_SCOPES = ["account:read", "posts:read", "posts:write", "ideas:write", "offline_access"] as const;
 
 export function generateCodeVerifier(): string {
   // 32 random bytes → 43-char base64url string (RFC 7636 allows 43-128).

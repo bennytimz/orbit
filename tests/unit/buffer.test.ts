@@ -32,7 +32,7 @@ describe("PKCE", () => {
     expect(url.searchParams.get("state")).toBe("st");
     expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:3000/api/buffer/callback");
     expect(url.searchParams.get("scope")?.split(" ")).toEqual([...BUFFER_SCOPES]);
-    expect(BUFFER_SCOPES).not.toContain("ideas:write");
+    expect(BUFFER_SCOPES).not.toContain("ideas:read"); // only write is needed for createIdea
   });
 });
 
