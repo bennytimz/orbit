@@ -5,7 +5,7 @@ import { PageHeader, Pill } from "@/components/shared";
 import { KnowledgeSection } from "@/components/voice/knowledge-section";
 import { Section } from "@/components/voice/profile-section";
 import { PreferencesSection } from "@/components/memory/preferences-section";
-import { VOICE_FIELDS } from "@/components/voice/voice-section";
+import { VOICE_FIELDS } from "@/components/voice/voice-fields";
 import type { KnowledgeEntry, Profile, UserInterest, UserPreference, VoiceProfile } from "@/types/domain";
 
 export const metadata: Metadata = { title: "Memory" };
