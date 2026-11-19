@@ -109,6 +109,10 @@ export interface StructuredOptions<S extends z.ZodType> {
   prompt: string;
   effort?: Effort;
   maxTokens?: number;
+  /** Per-request timeout override (default REQUEST_TIMEOUT_MS). */
+  timeoutMs?: number;
+  /** Per-request attempt count override (default 2). */
+  attempts?: number;
 }
 
 /**
@@ -129,6 +133,9 @@ export async function generateStructured<S extends z.ZodType>(opts: StructuredOp
         responseJsonSchema: toResponseSchema(opts.schema),
         maxOutputTokens: Math.min(65_536, (opts.maxTokens ?? 16_000) + THINKING_HEADROOM),
         thinkingConfig: thinkingConfig(model, opts.effort ?? "medium"),
+        ...(opts.timeoutMs || opts.attempts
+          ? { httpOptions: { timeout: opts.timeoutMs ?? REQUEST_TIMEOUT_MS, retryOptions: { attempts: opts.attempts ?? 2 } } }
+          : {}),
       },
     });
 

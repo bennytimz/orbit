@@ -90,12 +90,20 @@ Rules:
 - Prefer fewer, well-supported discoveries over many thin ones. Merge sources describing the same development.
 - Content angles must be things this user could credibly say given their stated identity — never assume experiences they have not described.`;
 
-export async function analyzeSources(ctx: UserContext, catalog: CatalogEntry[], focus: string): Promise<DiscoveryAnalysis> {
+export async function analyzeSources(
+  ctx: UserContext,
+  catalog: CatalogEntry[],
+  focus: string,
+  call: { effort?: "low" | "medium"; timeoutMs?: number; attempts?: number; maxTokens?: number } = {},
+): Promise<DiscoveryAnalysis> {
   const today = new Date().toISOString().slice(0, 10);
   return generateStructured({
     schema: DiscoveryAnalysisSchema,
     system: ANALYST_SYSTEM,
-    effort: "medium",
+    effort: call.effort ?? "medium",
+    timeoutMs: call.timeoutMs,
+    attempts: call.attempts,
+    maxTokens: call.maxTokens,
     prompt: `Today's date: ${today}
 
 <user_profile>
@@ -255,4 +263,62 @@ export async function discoverFromItems(
   const analysis = await analyzeSources(ctx, catalog, focus);
   const discoveries = await persistDiscoveries(supabase, userId, analysis, catalog, focus, provider);
   return { discoveries, sourcesFound: catalog.length, searches: 0, dropped: analysis.discoveries.length - discoveries.length };
+}
+
+/**
+ * Feed items are analyzed in small batches, one AI call at a time, each with
+ * its own short timeout and a single attempt, so a scan fits Gemini's free
+ * tier. A batch that times out is skipped and reported; batches already
+ * analyzed are kept. A rate-limit error stops the scan.
+ */
+export const FEED_BATCH_SIZE = 3;
+export const FEED_MAX_ITEMS = 6;
+export const FEED_PASSAGE_CHARS = 500;
+export const FEED_CALL_TIMEOUT_MS = 60_000;
+
+export interface FeedDiscoverResult extends DiscoverResult {
+  failedBatches: number;
+  batches: number;
+  lastError: string | null;
+}
+
+export function feedBatches<T>(items: T[], size = FEED_BATCH_SIZE, max = FEED_MAX_ITEMS): T[][] {
+  const capped = items.slice(0, max);
+  const out: T[][] = [];
+  for (let i = 0; i < capped.length; i += size) out.push(capped.slice(i, i + size));
+  return out;
+}
+
+export async function discoverFromFeedItems(
+  supabase: SupabaseClient,
+  userId: string,
+  items: { source: SourceInput; passages: string[] }[],
+  focus: string,
+): Promise<FeedDiscoverResult> {
+  const ctx = await loadUserContext(supabase, userId);
+  const batches = feedBatches(items);
+  const result: FeedDiscoverResult = { discoveries: [], sourcesFound: 0, searches: 0, dropped: 0, failedBatches: 0, batches: batches.length, lastError: null };
+  for (const batch of batches) {
+    const catalog: CatalogEntry[] = batch.map((item, i) => ({
+      id: `S${i + 1}`,
+      source: item.source,
+      passages: item.passages.map((p) => p.slice(0, FEED_PASSAGE_CHARS)),
+    }));
+    try {
+      const analysis = await analyzeSources(ctx, catalog, focus, { effort: "low", timeoutMs: FEED_CALL_TIMEOUT_MS, attempts: 1, maxTokens: 6000 });
+      const saved = await persistDiscoveries(supabase, userId, analysis, catalog, focus, "rss");
+      result.discoveries.push(...saved);
+      result.sourcesFound += catalog.length;
+      result.dropped += analysis.discoveries.length - saved.length;
+    } catch (error) {
+      if (!(error instanceof AIServiceError)) throw error;
+      result.failedBatches += 1;
+      result.lastError = error.message;
+      if (error.code === "rate_limited" || error.code === "auth_failed" || error.code === "not_configured") break;
+    }
+  }
+  if (!result.discoveries.length && result.failedBatches) {
+    throw new AIServiceError("provider_unavailable", result.lastError ?? "The AI provider is temporarily unavailable. Your saved work is safe.");
+  }
+  return result;
 }

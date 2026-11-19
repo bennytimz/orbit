@@ -7,7 +7,7 @@ import { fail, ok, runAction, type ActionResult } from "@/lib/action-result";
 import { extractArticle } from "@/lib/research/extract";
 import { fetchFeed } from "@/lib/research/rss";
 import { assertPublicUrl, FetchBlockedError } from "@/lib/research/safe-fetch";
-import { discoverFromItems, discoverFromWeb, type DiscoverResult } from "@/engines/radar/discover";
+import { discoverFromFeedItems, discoverFromItems, discoverFromWeb, FEED_MAX_ITEMS, type DiscoverResult } from "@/engines/radar/discover";
 import { buildResearchReport } from "@/engines/radar/research";
 import type { Discovery, ResearchFeed } from "@/types/domain";
 
@@ -127,9 +127,15 @@ export async function scanFeeds(): Promise<ActionResult<DiscoverSummary & { feed
       }),
     );
     if (!items.length) return fail(feedErrors.length ? `No feed items could be read. ${feedErrors.join(" ")}` : "No feed items from the last 14 days.");
-    const result = await discoverFromItems(supabase, userId, items.slice(0, 20), "Recent items from followed feeds", "rss");
+    // Newest first; discoverFromFeedItems analyzes only the most recent few, in small sequential batches.
+    items.sort((a, b) => (b.source.publishedAtIso ?? "").localeCompare(a.source.publishedAtIso ?? ""));
+    const result = await discoverFromFeedItems(supabase, userId, items, "Recent items from followed feeds");
     revalidatePath("/radar");
-    return ok({ ...summarize(result), feedErrors }, `${result.discoveries.length} discoveries from ${items.length} feed items.`);
+    const skipped = result.failedBatches ? ` ${result.failedBatches} of ${result.batches} batches timed out or failed and were skipped.` : "";
+    return ok(
+      { ...summarize(result), feedErrors },
+      `${result.discoveries.length} discoveries from the ${Math.min(items.length, FEED_MAX_ITEMS)} most recent of ${items.length} feed items.${skipped}`,
+    );
   });
 }
 
