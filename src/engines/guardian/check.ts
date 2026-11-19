@@ -8,6 +8,7 @@ import { describeVoice, loadUserContext } from "@/engines/brain/context";
 import { PLATFORMS } from "@/engines/studio/platforms";
 import type { ContentAsset, GuardianEvidence, GuardianIssue, GuardianReport, Perspective, ResearchSource } from "@/types/domain";
 import { overallStatus, runRuleChecks, type RuleIssue } from "./rules";
+import { listAssetMedia } from "@/lib/media/store";
 
 const status = z.enum(["supported", "partially_supported", "unsupported", "conflicting", "unable_to_verify"]);
 
@@ -114,6 +115,7 @@ export async function runGuardian(supabase: SupabaseClient, userId: string, asse
     otherBodies: ((others ?? []) as { id: string; title: string; body: string }[]),
     hasResearch: Boolean(asset.discovery_id || asset.research_report_id),
     linkedSourceCount: sources.length,
+    media: await listAssetMedia(supabase, userId, asset.id),
   });
   const linkIssues = await checkLinks(asset.body);
 

@@ -11,6 +11,8 @@ import { PublishDialog } from "@/components/publishing/publish-dialog";
 import { AddToCampaign } from "@/components/campaigns/add-to-campaign";
 import { ContentStatusPill, GuardianPill } from "@/components/shared";
 import { PLATFORMS } from "@/engines/studio/platforms";
+import { MediaSection, type MediaItemView } from "@/components/studio/media-section";
+import { PREVIEW_URL_TTL_SECONDS, listAssetMedia, signedUrls } from "@/lib/media/store";
 import type { BufferChannelRow, ContentAsset, ContentVersion, GuardianIssue, GuardianReport, ResearchSource } from "@/types/domain";
 
 export const metadata: Metadata = { title: "Editor" };
@@ -41,6 +43,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
     ? await supabase.from("guardian_issues").select("*").eq("guardian_report_id", report.id).eq("user_id", userId).order("created_at")
     : { data: [] };
   const connection = status.serviceRole ? await getConnection(userId).catch(() => null) : null;
+  const media = await loadMediaViews(supabase, userId, id, status.serviceRole);
 
   const sources = new Map<string, { source: Pick<ResearchSource, "id" | "url" | "title" | "publisher" | "published_at">; claims: string[] }>();
   for (const r of (sourceRows ?? []) as unknown as { claim_text: string | null; research_sources: Pick<ResearchSource, "id" | "url" | "title" | "publisher" | "published_at"> | null }[]) {
@@ -79,13 +82,16 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-        <ContentEditor
-          asset={asset}
-          versions={(versions as ContentVersion[]) ?? []}
-          sources={[...sources.values()]}
-          timeZone={tz}
-          aiAvailable={status.ai}
-        />
+        <div className="min-w-0 space-y-6">
+          <ContentEditor
+            asset={asset}
+            versions={(versions as ContentVersion[]) ?? []}
+            sources={[...sources.values()]}
+            timeZone={tz}
+            aiAvailable={status.ai}
+          />
+          {media.available ? <MediaSection assetId={asset.id} platform={asset.platform} items={media.items} /> : null}
+        </div>
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <PublishDialog
             asset={asset}
@@ -94,6 +100,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
             openIssues={((issues as GuardianIssue[]) ?? []).filter((i) => i.review_status === "open")}
             timeZone={tz}
             campaignAsset={ca}
+            media={media.items}
           />
           <GuardianPanel assetId={asset.id} report={report} issues={(issues as GuardianIssue[]) ?? []} guardianStatus={asset.guardian_status} aiAvailable={status.ai} />
           <AddToCampaign assetId={asset.id} campaigns={(campaigns ?? []) as { id: string; name: string }[]} currentCampaignId={asset.campaign_id} />
@@ -101,4 +108,34 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
       </div>
     </div>
   );
+}
+
+/** Draft media with short-lived preview links. `available` is false until media storage is configured. */
+async function loadMediaViews(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  userId: string,
+  assetId: string,
+  serviceRole: boolean,
+): Promise<{ available: boolean; items: MediaItemView[] }> {
+  if (!serviceRole) return { available: false, items: [] };
+  const { error: tableError } = await supabase.from("content_media").select("id", { head: true, count: "exact" }).eq("user_id", userId).limit(1);
+  if (tableError) return { available: false, items: [] };
+  const rows = await listAssetMedia(supabase, userId, assetId);
+  const urls = await signedUrls(rows.map((r) => r.storage_path), PREVIEW_URL_TTL_SECONDS).catch(() => new Map<string, string>());
+  const { data: pubs } = await supabase.from("buffer_publications").select("media_sent").eq("user_id", userId).eq("content_asset_id", assetId).eq("operation_status", "succeeded");
+  const sent = new Map<string, number>();
+  for (const p of (pubs ?? []) as { media_sent: { media_id: string }[] | null }[]) for (const m of p.media_sent ?? []) sent.set(m.media_id, (sent.get(m.media_id) ?? 0) + 1);
+  return {
+    available: true,
+    items: rows.map((r) => ({
+      id: r.id,
+      previewUrl: urls.get(r.storage_path) ?? null,
+      mime_type: r.mime_type,
+      size_bytes: r.size_bytes,
+      width: r.width,
+      height: r.height,
+      alt_text: r.alt_text,
+      sentCount: sent.get(r.id) ?? 0,
+    })),
+  };
 }

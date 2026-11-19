@@ -17,6 +17,7 @@ import { formatDateTime, utcToZonedLocal, zonedLocalToUtc } from "@/lib/format";
 import type { BufferChannelRow, ContentAsset, GuardianIssue, PublishMode } from "@/types/domain";
 import type { ChannelOutcome } from "@/engines/publisher/publish";
 import { cn } from "@/lib/utils";
+import { mediaProblems, type MediaInfo } from "@/engines/studio/media";
 
 const MODES: { id: PublishMode; label: string; desc: string }[] = [
   { id: "draft", label: "Save as Buffer draft", desc: "Creates a draft in Buffer. Nothing is published." },
@@ -37,6 +38,7 @@ export function PublishDialog({
   openIssues,
   timeZone,
   campaignAsset,
+  media = [],
 }: {
   asset: ContentAsset;
   channels: BufferChannelRow[];
@@ -44,6 +46,8 @@ export function PublishDialog({
   openIssues: GuardianIssue[];
   timeZone: string;
   campaignAsset: { id: string; scheduled_at: string | null; channel_ids: string[] } | null;
+  /** Images attached in Studio → Media. Optional; absent means text only. */
+  media?: MediaInfo[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -76,8 +80,13 @@ export function PublishDialog({
       const p = platformForService(ch.service);
       if (!p) continue;
       const spec = PLATFORMS[p];
-      if (spec.requiresMedia) {
-        out[id] = `${spec.label} requires media; ORBIT does not attach media yet.`;
+      if (spec.requiresMedia && media.length === 0) {
+        out[id] = `${spec.label} requires media. Attach an image in the Media section first.`;
+        continue;
+      }
+      const mediaIssue = mediaProblems(media, p, spec.label)[0];
+      if (mediaIssue) {
+        out[id] = mediaIssue;
         continue;
       }
       const parts = publishableParts(asset.body, asset.thread_parts, p);
@@ -88,7 +97,7 @@ export function PublishDialog({
       }
     }
     return out;
-  }, [selected, channels, text]);
+  }, [selected, channels, asset.body, asset.thread_parts, media]);
 
   const problems: string[] = [];
   if (!text.trim()) problems.push("The content is empty.");
@@ -273,6 +282,15 @@ export function PublishDialog({
                 {MODES.find((m) => m.id === mode)?.label}
                 {dueAt ? ` — ${formatDateTime(dueAt, timeZone)}` : ""}
               </dd>
+              {media.length ? (
+                <>
+                  <dt className="text-muted-foreground">Media</dt>
+                  <dd>
+                    {media.length} image{media.length === 1 ? "" : "s"} attached
+                    {media.some((m) => !m.alt_text.trim()) ? <span className="text-xs text-muted-foreground"> · some without alt text</span> : null}
+                  </dd>
+                </>
+              ) : null}
               <dt className="text-muted-foreground">Approval</dt>
               <dd>Your approval on this screen</dd>
             </dl>

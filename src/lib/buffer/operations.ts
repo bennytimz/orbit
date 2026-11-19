@@ -116,8 +116,13 @@ export interface CreatePostInput {
   saveToDraft?: boolean;
   aiAssisted?: boolean;
   source?: string;
-  /** X threads: every part, including the first (top-level `text` repeats part 1). */
-  metadata?: { twitter: { thread: { text: string }[] } };
+  /** X threads: every part, including the first (top-level `text` repeats part 1). Instagram: post type + feed sharing. */
+  metadata?: {
+    twitter?: { thread: { text: string }[] };
+    instagram?: { type: "post" | "carousel"; shouldShareToFeed: boolean };
+  };
+  /** Ordered images (AssetInput). Each URL must stay publicly reachable until the post publishes. */
+  assets?: { image: { url: string; metadata?: { altText: string } } }[];
 }
 
 export type CreatePostResult =

@@ -6,6 +6,8 @@ import { getAccessToken, markNeedsReauth } from "@/lib/buffer/credentials";
 import { createPost, fetchChannels, fetchPosts, type CreatePostInput } from "@/lib/buffer/operations";
 import { PLATFORMS, countCharacters, platformForService, publishableParts, publishableText } from "@/engines/studio/platforms";
 import type { BufferChannelRow, BufferPublication, ContentAsset, GuardianIssue, PublishMode } from "@/types/domain";
+import { buildImageAssets, instagramMetadata, mediaProblems, type MediaInfo } from "@/engines/studio/media";
+import { BUFFER_URL_TTL_SECONDS, listAssetMedia, signedUrls } from "@/lib/media/store";
 
 /** Re-reads channels from Buffer for the selected organization and stores them. */
 export async function syncChannels(userId: string): Promise<BufferChannelRow[]> {
@@ -89,6 +91,8 @@ export function preflight(
   channels: Pick<BufferChannelRow, "channel_id" | "name" | "service" | "is_disconnected" | "is_locked">[],
   req: Pick<PublishRequest, "channelIds" | "mode" | "dueAt" | "acknowledgeUnchecked">,
   now: Date = new Date(),
+  /** Images attached to the draft (Studio → Media). */
+  media: MediaInfo[] = [],
 ): PreflightProblem[] {
   const problems: PreflightProblem[] = [];
   const text = publishableText(asset.body, asset.thread_parts);
@@ -118,7 +122,11 @@ export function preflight(
     const platform = platformForService(ch.service);
     if (platform) {
       const spec = PLATFORMS[platform];
-      if (spec.requiresMedia) problems.push({ channelId: id, message: `${spec.label} requires an image or video, and ORBIT does not attach media yet.` });
+      if (spec.requiresMedia && media.length === 0) {
+        problems.push({ channelId: id, message: `${spec.label} requires an image or video. Attach an image in the draft's Media section.` });
+      } else {
+        for (const message of mediaProblems(media, platform, spec.label)) problems.push({ channelId: id, message });
+      }
       const parts = publishableParts(asset.body, asset.thread_parts, platform);
       parts.forEach((part, i) => {
         const count = countCharacters(part, platform);
@@ -132,7 +140,15 @@ export function preflight(
 }
 
 /** `parts` holds one entry for a single post, or every part of an X thread. */
-export function buildCreateInput(parts: string[], channelId: string, mode: PublishMode, dueAt: string | null, aiAssisted: boolean): CreatePostInput {
+export function buildCreateInput(
+  parts: string[],
+  channelId: string,
+  mode: PublishMode,
+  dueAt: string | null,
+  aiAssisted: boolean,
+  /** Images (Buffer AssetInput) and the channel's service, when media is attached. */
+  media?: { assets: CreatePostInput["assets"]; service: string | null },
+): CreatePostInput {
   const input: CreatePostInput = {
     text: parts[0] ?? "",
     channelId,
@@ -144,6 +160,10 @@ export function buildCreateInput(parts: string[], channelId: string, mode: Publi
   if (mode === "draft") input.saveToDraft = true;
   if (mode === "customScheduled" && dueAt) input.dueAt = new Date(dueAt).toISOString();
   if (parts.length > 1) input.metadata = { twitter: { thread: parts.map((text) => ({ text })) } };
+  if (media?.assets?.length) {
+    input.assets = media.assets;
+    if (media.service === "instagram") input.metadata = { ...input.metadata, ...instagramMetadata(media.assets.length) };
+  }
   return input;
 }
 
@@ -162,10 +182,18 @@ export async function publishToBuffer(
     supabase.from("buffer_channels").select("*").eq("user_id", userId),
   ]);
   const channels = (channelRows as BufferChannelRow[] | null) ?? [];
-  const problems = preflight(asset, (issues as GuardianIssue[] | null) ?? [], channels, req);
+  const media = await listAssetMedia(supabase, userId, asset.id);
+  const problems = preflight(asset, (issues as GuardianIssue[] | null) ?? [], channels, req, new Date(), media);
   if (problems.length) return { outcomes: [], problems };
 
   const { token } = await getAccessToken(userId);
+  // Buffer fetches media when the post publishes, so it gets long-lived links (see src/lib/media/store.ts).
+  const mediaUrls = media.length ? await signedUrls(media.map((m) => m.storage_path), BUFFER_URL_TTL_SECONDS) : new Map<string, string>();
+  if (media.some((m) => !mediaUrls.has(m.storage_path))) {
+    return { outcomes: [], problems: [{ channelId: null, message: "Could not prepare the attached images for Buffer. Nothing was sent; try again." }] };
+  }
+  const assets = buildImageAssets(media.map((m) => ({ url: mediaUrls.get(m.storage_path)!, alt_text: m.alt_text })));
+  const mediaSent = media.length ? media.map((m) => ({ media_id: m.id, mime: m.mime_type })) : null;
   const text = publishableText(asset.body, asset.thread_parts);
   const outcomes: ChannelOutcome[] = [];
 
@@ -206,6 +234,7 @@ export async function publishToBuffer(
         text_sent: text,
         scheduled_at: req.mode === "customScheduled" ? req.dueAt : null,
         operation_status: "pending",
+        ...(mediaSent ? { media_sent: mediaSent } : {}),
       })
       .select("*")
       .single();
@@ -216,7 +245,7 @@ export async function publishToBuffer(
 
     try {
       const parts = publishableParts(asset.body, asset.thread_parts, platformForService(channel.service));
-      const result = await createPost(token, buildCreateInput(parts, channelId, req.mode, req.dueAt, asset.ai_generated));
+      const result = await createPost(token, buildCreateInput(parts, channelId, req.mode, req.dueAt, asset.ai_generated, assets.length ? { assets, service: channel.service } : undefined));
       if (result.ok) {
         await admin
           .from("buffer_publications")

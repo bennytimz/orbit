@@ -1,5 +1,6 @@
 import type { GuardianEvidence, Platform } from "@/types/domain";
 import { PLATFORMS, countCharacters, countEmoji, countHashtags } from "@/engines/studio/platforms";
+import { mediaProblems, type MediaInfo } from "@/engines/studio/media";
 
 export interface RuleIssue {
   issue_type: string;
@@ -22,6 +23,8 @@ export interface RuleInput {
   otherBodies: { id: string; title: string; body: string }[];
   hasResearch: boolean;
   linkedSourceCount: number;
+  /** Images attached in Studio → Media. Undefined when media isn't loaded (treated as none). */
+  media?: MediaInfo[];
 }
 
 export const GENERIC_AI_PHRASES = [
@@ -127,16 +130,42 @@ export function runRuleChecks(input: RuleInput): RuleIssue[] {
     });
   }
 
-  if (spec.requiresMedia) {
+  const media = input.media ?? [];
+  if (spec.requiresMedia && media.length === 0) {
     issues.push({
       issue_type: "missing_media",
       severity: "warning",
       title: `${spec.label} posts require an image or video`,
-      explanation: `${spec.label} does not accept text-only posts. ORBIT does not attach media yet, so this draft cannot be published to ${spec.label} through ORBIT.`,
+      explanation: `${spec.label} does not accept text-only posts. This draft has no media attached, so it cannot be sent to ${spec.label} through ORBIT yet.`,
       excerpt: null,
-      recommended_action: "Use the visual brief to create media, then attach it in Buffer — or publish this caption to a different platform.",
+      recommended_action: "Attach an image in the draft's Media section (the visual brief can guide it), or publish this caption to a different platform.",
       evidence: [],
     });
+  } else if (media.length) {
+    const problems = mediaProblems(media, input.platform, spec.label);
+    if (problems.length) {
+      issues.push({
+        issue_type: "invalid_media",
+        severity: "warning",
+        title: `Attached media doesn't meet ${spec.label}'s requirements`,
+        explanation: problems.join(" "),
+        excerpt: null,
+        recommended_action: "Replace or remove the affected images in the Media section. ORBIT won't send this draft to the channel until the media is valid.",
+        evidence: [],
+      });
+    }
+    const missingAlt = media.filter((m) => !m.alt_text.trim()).length;
+    if (missingAlt) {
+      issues.push({
+        issue_type: "media_alt_text",
+        severity: "info",
+        title: `${missingAlt} image${missingAlt === 1 ? " has" : "s have"} no alt text`,
+        explanation: "Alt text describes an image for people using screen readers. Buffer passes it to networks that support it.",
+        excerpt: null,
+        recommended_action: "Add a short description of each image in the Media section.",
+        evidence: [],
+      });
+    }
   }
 
   const hashtags = countHashtags(body);
