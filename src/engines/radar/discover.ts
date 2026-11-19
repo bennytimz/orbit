@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateStructured, webResearch } from "@/lib/ai/client";
-import { AIServiceError } from "@/lib/ai/errors";
+import { AIServiceError, type AIErrorCode } from "@/lib/ai/errors";
 import { describeIdentity, loadUserContext, type UserContext } from "@/engines/brain/context";
 import type { Discovery, RelevanceFactors, ResearchSource } from "@/types/domain";
 import { computeRelevanceScore, parseSourceDate, recencyFactor, clampScore } from "./relevance";
@@ -297,6 +297,7 @@ export async function discoverFromFeedItems(
 ): Promise<FeedDiscoverResult> {
   const ctx = await loadUserContext(supabase, userId);
   const batches = feedBatches(items);
+  let lastCode: AIErrorCode = "provider_unavailable";
   const result: FeedDiscoverResult = { discoveries: [], sourcesFound: 0, searches: 0, dropped: 0, failedBatches: 0, batches: batches.length, lastError: null };
   for (const batch of batches) {
     const catalog: CatalogEntry[] = batch.map((item, i) => ({
@@ -313,12 +314,14 @@ export async function discoverFromFeedItems(
     } catch (error) {
       if (!(error instanceof AIServiceError)) throw error;
       result.failedBatches += 1;
-      result.lastError = error.message;
+      result.lastError = error.userMessage; // user-safe; the raw provider detail stays in server logs
+      lastCode = error.code;
+      console.error("[orbit] Feed batch analysis failed", error.code, error.message);
       if (error.code === "rate_limited" || error.code === "auth_failed" || error.code === "not_configured") break;
     }
   }
   if (!result.discoveries.length && result.failedBatches) {
-    throw new AIServiceError("provider_unavailable", result.lastError ?? "The AI provider is temporarily unavailable. Your saved work is safe.");
+    throw new AIServiceError(lastCode, result.lastError ?? "The AI provider is temporarily unavailable. Your saved work is safe.");
   }
   return result;
 }

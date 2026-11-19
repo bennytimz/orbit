@@ -14,3 +14,26 @@ describe("feedBatches", () => {
     expect(feedBatches([])).toEqual([]);
   });
 });
+
+import { vi } from "vitest";
+import { AIServiceError } from "@/lib/ai/errors";
+import { discoverFromFeedItems } from "@/engines/radar/discover";
+
+vi.mock("@/engines/brain/context", () => ({ loadUserContext: async () => ({}), describeIdentity: () => "" }));
+vi.mock("@/lib/ai/client", () => ({
+  webResearch: vi.fn(),
+  generateStructured: vi.fn(async () => {
+    throw new AIServiceError("provider_unavailable", "The AI provider is temporarily unavailable. Your saved work is safe.", '503 {"error":{"code":503}}');
+  }),
+}));
+
+describe("discoverFromFeedItems", () => {
+  it("reports only the user-safe message when every batch fails", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => ({ source: { url: `https://example.com/${i}`, title: `Item ${i}` }, passages: ["x".repeat(2000)] }));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = await discoverFromFeedItems({} as never, "user", items as never, "focus").catch((e) => e);
+    expect(err).toBeInstanceOf(AIServiceError);
+    expect(err.userMessage).toBe("The AI provider is temporarily unavailable. Your saved work is safe.");
+    expect(err.userMessage).not.toContain("503");
+  });
+});
