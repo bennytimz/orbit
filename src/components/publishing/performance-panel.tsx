@@ -41,10 +41,21 @@ export function PerformancePanel({ timeZone }: { timeZone: string }) {
     } else setLoadError(r.error);
   };
 
+  // Load once when the panel opens; the server refreshes from Buffer only if the cache is stale.
   useEffect(() => {
-    void run(false);
-    // Load once when the panel opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    loadPerformance(false)
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) setData(r.data);
+        else setLoadError(r.error);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError("Could not load performance data.");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
