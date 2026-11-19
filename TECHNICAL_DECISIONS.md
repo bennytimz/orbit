@@ -116,3 +116,20 @@ How calls work now:
 - The action reads title, summary and the first source URL from the database for the signed-in user; the client sends only the discovery ID. Summary is cut to 500 chars at a word boundary.
 - Duplicate protection: the recorded Idea ID in `activity_logs` (`buffer_idea_created`, resource = discovery) marks an item as saved. The button renders "Saved to Ideas ✓" disabled, and `saveIdeaOnce` refuses a repeat save before any Buffer call; if the lookup fails, Buffer is not called. A research report shares its discovery's ID, so saving from either place counts for both. Network/5xx outcomes are reported as unconfirmed so the user checks Buffer before retrying.
 
+
+### TD-021 — Image media via private storage and long-lived signed URLs (2026-11-19, post-commit)
+- Buffer's GraphQL API has no upload endpoint. `CreatePostInput.assets` takes `ImageAssetInput { url, metadata { altText! } }`, and Buffer fetches the URL itself (introspected; see `notes/buffer-schema-2026-11.md`). A live draft read back the exact URL ORBIT sent, so Buffer stores the URL rather than copying the file at creation time.
+- Images are uploaded to a **private** Supabase Storage bucket (`orbit-media`, 4 MB, JPEG/PNG/GIF) through `/api/media`, which checks the session and draft ownership and sniffs the real type and dimensions from the bytes. `content_media` rows are owner-only (RLS). The bucket has no `storage.objects` policies; only server code with the service role reads or writes it.
+- Previews use 1-hour signed URLs. URLs sent to Buffer are signed for **365 days**, because Buffer must still reach the image when a scheduled post publishes. A public bucket was rejected: it would expose every draft image to anyone guessing paths.
+- Per-platform limits (`MEDIA_RULES` in `src/engines/studio/media.ts`) come from platform documentation; Instagram needs 1–10 JPEG/PNG images with aspect ratio 0.8–1.91 and gets `metadata.instagram { type, shouldShareToFeed }`. Preflight now blocks Instagram only when there is no media.
+- What was sent is recorded per ledger row in `buffer_publications.media_sent`. Removing an image warns how many Buffer posts used it.
+
+### TD-022 — Post performance from `Post.metrics`, API-key connections only (2026-11-19, post-commit)
+- `Post.metrics`, `metricsUpdatedAt`, `sentAt` and `externalLink` require the `insightsRead` scope, which Buffer grants to personal API keys but not to OAuth apps. ORBIT reads metrics only for `api_key` connections and tells OAuth users why the panel is empty, instead of requesting a scope it cannot get.
+- Only posts ORBIT created (matched by Buffer post ID in the ledger) are shown. Values are cached in `buffer_post_metrics` and re-read at most every 12 hours.
+- "Suggest preferences" compares groups (with/without media, X threads vs single posts, long vs short LinkedIn/Facebook posts) only when each group has at least 3 posts and the ratio is at least 1.5×. Suggestions are stored as `suggested` preferences and change nothing until the user accepts them in Memory. No metric is ever estimated or invented.
+
+### TD-023 — Group platform variants with `createContentItem` (2026-11-19, post-commit)
+- `createContentItem` (experimental, `posts:write`) creates one Buffer content item holding a post per channel. It is offered as a separate "Send variants together" action; the existing per-channel publish dialog is unchanged.
+- Validation errors are all-or-nothing, but a failure after posts are created still creates them and the error payload carries no item ID. ORBIT therefore marks every post in a failed grouped send as `unknown` (not failed) so the user checks Buffer before retrying, and records `buffer_content_item_id` on each ledger row when the item is returned.
+- The same server-enforced approval (`approved: true`), idempotency keys and per-channel preflight apply as for single posts.

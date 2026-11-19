@@ -58,6 +58,15 @@ Configure the Supabase Auth site URL and redirect URLs to include `${NEXT_PUBLIC
 | `npm test` | Unit tests (Vitest) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run test:e2e` | Builds, then runs the Playwright demo-path test with mocked AI and Buffer (needs `.env.local` with Supabase keys; creates and deletes a throwaway user). First run: `npx playwright install chromium` |
+
+## Buffer features
+
+- Drafts, queue and custom-time scheduling with `createPost`; X threads as one post.
+- Save discoveries to Buffer Ideas (`createIdea`).
+- Image attachments with alt text, sent as post assets. Instagram is available once a draft has an image.
+- "Send variants together": a generation's platform variants go to Buffer as one content item (`createContentItem`).
+- Performance panel: metrics Buffer reports for posts ORBIT sent (requires a personal API key connection).
 
 ## Safety guarantees
 

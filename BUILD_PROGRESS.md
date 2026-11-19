@@ -1,6 +1,6 @@
 # Build Progress
 
-_Last updated: 2026-11-14_
+_Last updated: 2026-11-19_
 
 ## Status summary
 The whole mandatory workflow is implemented in code and builds:
@@ -26,10 +26,23 @@ Radar → research report → Develop My Perspective (text/voice) → Studio gen
 | Evolution | Edit feedback capture, "Analyze my edits" → suggested preferences → accept/edit/reject, explicit preferences | typecheck |
 | Public landing (`/`) | Logged-out visitors see a landing page (hero, embedded demo video, 6-step how-it-works, real screenshots from the live account in `public/screens/`, Buffer API summary, footer); signed-in users are redirected to `/dashboard`. `/login` and `/signup` link back to `/`. OpenGraph/Twitter meta in the root layout | local `next start` (curl + Playwright), live check after deploy |
 | Save to Buffer Ideas (post-submission, additive) | Lightbulb button on Radar cards and "Save to Buffer Ideas" on the research page → `saveDiscoveryToBufferIdeas` (`src/app/actions/ideas.ts`) → `createIdea` (`src/lib/buffer/ideas.ts`) with title, short summary and source link. Every `CreateIdeaPayload` member handled; success only with a returned idea ID; logged to `activity_logs` (`buffer_idea_created`). OAuth now requests `ideas:write`. Duplicate protection: saved items show "Saved to Ideas ✓" (disabled) and the action refuses repeat saves without calling Buffer | unit (19 tests in `tests/unit/buffer-ideas.test.ts`); **live 2026-11-14**: Idea `6af8567609a1192bfd721886` created on production and read back via the `ideas` query |
+| Media + Instagram (post-commit, TD-021) | Studio "Media" section: upload JPEG/PNG/GIF (4 MB, up to 10), previews, alt text, remove with a warning when Buffer posts used the image. Private `orbit-media` bucket, `content_media` table (RLS). Sent to Buffer as `assets.images` with 365-day signed URLs; Instagram gets `metadata.instagram`, and preflight allows it once an image is attached. Guardian adds `invalid_media` and `media_alt_text` checks | unit (`tests/unit/media.test.ts`); **live 2026-11-19**: LinkedIn image drafts created, read back and deleted |
+| Performance loop (post-commit, TD-022) | Publishing → Performance: `Post.metrics` for ORBIT-sent posts (API-key connections), 12 h cache in `buffer_post_metrics`, "Suggest preferences" → suggested preferences in Memory | unit (`tests/unit/performance.test.ts`); **live**: metrics query validated, OAuth and API-key states checked in the UI |
+| Grouped variants (post-commit, TD-023) | Studio "Send variants together": configure → final confirmation → one `createContentItem` with a post per channel, per-post ledger rows with `buffer_content_item_id` | unit (`tests/unit/content-items.test.ts`); **live 2026-11-19**: LinkedIn (with image) + X thread item created through the UI, verified and deleted |
+| E2E (post-commit) | `npm run test:e2e`: Playwright demo path (sign in → Radar from URL → report → perspective → Studio → Guardian → publish dialog final confirmation, no approval) with Gemini/Buffer mocked in the test server | passes (1 test, ~36 s) |
 | Command Center | Pipeline counts, top discoveries, Guardian alerts, ready-for-review, upcoming (ledger), campaigns, quick actions | typecheck |
 | Memory / Settings | Inspect/edit/delete identity, voice, preferences, knowledge; integration status, privacy, account deletion | typecheck |
 
 ## Test status
+- **2026-11-19 post-commit regression** (local production build on Node 22, signed in as the owner through the UI; every Buffer object created was verified and then deleted):
+  - Every page loads; existing screens match production apart from the new sections.
+  - Text-only LinkedIn draft, X thread draft (2 parts in `metadata.twitter.thread`), LinkedIn post scheduled for 2026-12-25 (`customScheduled`), LinkedIn draft with an image, and a grouped content item: all created through the UI, read back from Buffer and deleted.
+  - Campaigns: phase edit saved, planned date stored in UTC, item shown in list and December calendar views.
+  - Save to Buffer Ideas: already-saved discovery shows "Saved to Ideas ✓" disabled on Radar and the research page.
+  - Publishing: OAuth connection active with both channels (LinkedIn, X).
+  - Transcription without `TRANSCRIPTION_API_KEY`: UI explains it is not configured and disables Transcribe; the API returns 503 `not_configured` with a clear message.
+  - RSS: feed followed and fetched live; the Gemini analysis timed out (see KNOWN_LIMITATIONS).
+  - The `publish-dialog.tsx` hook-dependency lint warning is fixed.
 - **2026-11-14 UI click-through** (Node 22 dev server, demo account):
   - The full demo path works in the browser, up to the final publish confirmation; nothing was sent.
   - Fixed along the way:

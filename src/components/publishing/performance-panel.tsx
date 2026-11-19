@@ -95,8 +95,8 @@ export function PerformancePanel({ timeZone }: { timeZone: string }) {
       {data?.availability === "needs_reauth" ? <Notice tone="warning">Your Buffer connection needs to be renewed before metrics can be read.</Notice> : null}
       {data?.availability === "oauth_no_insights" ? (
         <Notice title="Metrics need a personal API key connection">
-          Buffer only lets personal API keys read post metrics (the <code>insightsRead</code> scope can&apos;t be granted through OAuth). This account is connected with OAuth, so ORBIT can&apos;t read metrics for its {data.orbitPostCount} Buffer post
-          {data.orbitPostCount === 1 ? "" : "s"}. To see them, disconnect and reconnect with a Buffer personal API key.
+          Buffer only lets personal API keys read post metrics (the <code>insightsRead</code> scope can&apos;t be granted through OAuth). This account is connected with OAuth, so ORBIT can&apos;t read metrics for the {data.orbitPostCount} post
+          {data.orbitPostCount === 1 ? "" : "s"} it has created in Buffer. To see them, disconnect and reconnect with a Buffer personal API key.
         </Notice>
       ) : null}
 
@@ -157,7 +157,7 @@ export function PerformancePanel({ timeZone }: { timeZone: string }) {
           ) : (
             <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               {data.orbitPostCount
-                ? `None of the ${data.orbitPostCount} post${data.orbitPostCount === 1 ? "" : "s"} ORBIT created in Buffer has been sent yet. Buffer reports metrics only for sent posts, about a day after they publish.`
+                ? `${data.orbitPostCount === 1 ? "The post ORBIT created in Buffer hasn't" : `None of the ${data.orbitPostCount} posts ORBIT created in Buffer have`} been sent yet. Buffer reports metrics only for sent posts, about a day after they publish.`
                 : "ORBIT hasn't sent any posts to Buffer yet."}
             </p>
           )}

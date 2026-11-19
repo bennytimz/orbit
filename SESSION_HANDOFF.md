@@ -1,34 +1,46 @@
 # Session Handoff
 
-## PAUSED (2026-11-19, user's PC low on power). Read this first
-- **Branch:** `feat/post-commit` (pushed). `main` and production are untouched. Do not merge or deploy before 2026-11-21 (Lagos time).
-- **Phase / step:** Phase 2, feature **B (performance loop)**. The code is written, but there is **1 lint error** to fix: `src/components/publishing/performance-panel.tsx:45` (`react-hooks/set-state-in-effect`; it calls `run(false)` in `useEffect`). Fix it by triggering the initial load without a synchronous setState in the effect (e.g. use the `useEffect` + `startTransition`/async IIFE pattern, or load the initial data server-side and pass it as a prop). Then run typecheck, lint, test and build, and commit B.
-- **Done:**
-  - Phase 1: schema notes in `notes/buffer-schema-2026-11.md`.
-  - **A (media + Instagram):** committed `8001f4f` and live-tested (see below). The `publish-dialog.tsx` lint warning was fixed in that commit.
-- **Half-done:**
-  - B code: `src/lib/buffer/metrics.ts`, `src/engines/evolution/performance.ts`, `src/app/actions/performance.ts`, `src/components/publishing/performance-panel.tsx`, a new section on `src/app/(app)/publishing/page.tsx`, the Memory label "From post performance" for `performance_*` keys, and `tests/unit/performance.test.ts`. Unit tests pass (146/146) and typecheck passes. The lint error above remains. Build has not been re-run since A.
-  - B isn't live-verified in the UI yet. Live facts: metrics need `insightsRead`, which only personal API keys get, not OAuth. Production is OAuth-connected, so the panel will show the "needs a personal API key" notice. The personal key does return metrics, for 3 sent X posts that ORBIT didn't create.
-- **Not started:**
-  - C: group variants via Content Items `createContentItem`. The schema supports it with `posts:write` and needs no scope change. Plan: a new "Send variants together" action over a `generation_group`, all-or-nothing, recording `buffer_content_item_id`.
-  - D: RSS check, scheduled-post test (30+ days out, then delete), campaigns check, transcription graceful-failure check.
-  - E: Playwright E2E.
-  - F: landing page lines and docs (README, KNOWN_LIMITATIONS, TECHNICAL_DECISIONS: add TD-021 "media via 365-day signed URLs", BUILD_PROGRESS).
-  - Phase 3 regression. Phase 4 is not before 2026-11-21.
-- **Migrations run on the shared Supabase DB (2026-11-19, SQL editor, succeeded):** `supabase/migrations/20261119000000_post_commit_additions.sql`. It is additive only:
-  - new tables `content_media` and `buffer_post_metrics` (RLS, owner policies);
-  - nullable columns `buffer_publications.media_sent` and `buffer_publications.buffer_content_item_id`;
-  - private bucket `orbit-media` (4 MB; jpeg/png/gif; no storage.objects policies).
-  - Verified via the service role. The anon key sees nothing.
-- **Live Buffer objects:** LinkedIn drafts with an image, both **deleted**:
-  - `6afee8affcd8732ff2118ddf`: created, then deleted. Its first readback used the wrong query shape. Confirmed NOT_FOUND after the delete.
-  - `6afee8f38840f68c22be40a3`: created, read back (draft, linkedin, image/png asset), deleted, confirmed NOT_FOUND.
-  - Test files `live-test/*.png` were removed from `orbit-media`, and the bucket is empty.
-  - No Ideas, scheduled posts or other objects were created.
-- **Scopes changed:** none.
-- **Known breakage on the branch:** only the lint error above. The scratch scripts live in the session scratchpad, not in the repo.
-- **Exact next action:** fix the lint error in `performance-panel.tsx`, then run `npm run typecheck && npm run lint && npm test && npm run build` (Node 22). Commit "Add Performance panel …", then continue with C.
+## Post-commit build (2026-11-19). Read this first
+- **Branch:** `feat/post-commit` (pushed). `main` and production are untouched (`origin/main` = `d898ec7`). **Do not merge or deploy before 2026-11-21 (Lagos time).**
+- **State:** Phases 1–3 are complete. Phase 4 (merge + deploy) is the only step left. Typecheck, lint, 150 unit tests, `next build` and `npm run test:e2e` all pass on Node 22.
+- **Shipped on the branch** (details in BUILD_PROGRESS.md, TD-021–023):
+  - A. Image media on drafts (private `orbit-media` bucket, alt text, Guardian checks), sent to Buffer as assets. Instagram is allowed once an image is attached; it was not tested live because no Instagram channel is connected.
+  - B. Performance panel on Publishing (`Post.metrics`, API-key connections only) with "Suggest preferences" → Memory.
+  - C. "Send variants together" in Studio (`createContentItem`).
+  - D. Checks:
+    - Verified: scheduled post 30+ days out; campaigns list, calendar and phase edits; transcription graceful failure; the publish-dialog lint warning; Save to Ideas disabled state; both channels connected.
+    - RSS fetch works, but the Gemini analysis timed out (see KNOWN_LIMITATIONS).
+  - E. Playwright E2E (`npm run test:e2e`), Gemini and Buffer mocked in the test server, throwaway Supabase user per run.
+  - F. Landing page and docs:
+    - Buffer API list: three new feature lines with no labels, and "(added after submission)" removed from the createIdea line (user instruction, 2026-11-19).
+    - README, KNOWN_LIMITATIONS, TECHNICAL_DECISIONS and BUILD_PROGRESS updated.
+  - Fix: deleting a draft now deletes its image files, except images already sent to Buffer.
+- **Migration run on the shared DB (2026-11-19, SQL editor):** `supabase/migrations/20261119000000_post_commit_additions.sql`. It is additive only: `content_media`, `buffer_post_metrics`, two nullable `buffer_publications` columns and a private bucket. Nothing else to run at merge time.
+- **Scopes changed:** none. **New env vars:** none.
+- **Live Buffer objects created and deleted (all confirmed NOT_FOUND):**
 
+  | Kind | Buffer ID |
+  | --- | --- |
+  | Draft | `6afee8affcd8732ff2118ddf` |
+  | Draft | `6afee8f38840f68c22be40a3` |
+  | Draft | `6aff0dd3cfb6abb69448d215` |
+  | Draft (X thread) | `6aff0dfe76fc37c1234eb606` |
+  | Draft (image) | `6aff0e685187bf7d546ce550` |
+  | Scheduled post (2026-12-25) | `6aff0e1fe28319f49a0eb317` |
+  | Content item (with its posts) | `6aff0aeccac0791c5d93ad95` |
+  | Content item (with its posts) | `6aff0e8b5187bf7d546ceeae` |
+
+  - No Ideas were created.
+  - ORBIT's ledger rows for the 6 UI sends remain in Publishing → history, although those Buffer posts no longer exist.
+- **Exact next action (on or after 2026-11-21, Lagos):**
+  ```
+  git checkout main && git pull --ff-only
+  git merge --ff-only feat/post-commit
+  npm ci && npm run typecheck && npm run lint && npm test && npm run build
+  git push origin main
+  ```
+  - Pushing `main` deploys production if Vercel's Git integration is on. Otherwise run `vercel --prod`.
+  - Then open https://orbit-theta-lyart.vercel.app signed in and check Studio (Media section), Publishing (Performance) and the landing page.
 
 _Session ended 2026-11-14. Production: https://orbit-theta-lyart.vercel.app_
 
@@ -38,7 +50,7 @@ _Session ended 2026-11-14. Production: https://orbit-theta-lyart.vercel.app_
   - `BUFFER_SCOPES` now includes `ideas:write`. Production was reconnected via OAuth: the consent screen listed Your Account, Your Posts, and Your Ideas ("Create and manage ideas on your behalf"); the stored token scopes are `account:read posts:read posts:write ideas:write offline_access`. LinkedIn and X channels reloaded.
   - Live test on production: PostgreSQL 18 discovery saved → Buffer Idea **`6af8567609a1192bfd721886`** (org `6af7549d676fbe883b3cea48`), read back via the `ideas` query with matching title/summary/source link. No posts were created.
   - Duplicate protection: items with a recorded Idea ID render "Saved to Ideas ✓" (disabled; icon-only check on Radar cards with that label as tooltip/aria-label) and `saveIdeaOnce` refuses repeats without calling Buffer. The Connect with Buffer blurb now mentions creating ideas. Unit-tested only; not re-tested live.
-  - Landing page Buffer API list has the line "createIdea: save discoveries to Buffer Ideas (added after submission)".
+  - Landing page Buffer API list has the line "createIdea: save discoveries to Buffer Ideas" (the "(added after submission)" label was removed on `feat/post-commit`).
   - Not done: viewing the Idea in publish.buffer.com in Chrome (the extension has no permission on that domain); verified via the API instead.
 - **Landing page (2026-11-14):** `/` is now public for logged-out visitors (`src/proxy.ts` exact-match `/`; signed-in `/` goes to `/dashboard`). Page: `src/app/page.tsx`. Screenshots in `public/screens/` were taken read-only from the live account with Playwright (name/email hidden; the publish screenshot stops at the final confirmation, nothing was sent). Share metadata: `src/app/layout.tsx`, which uses `NEXT_PUBLIC_APP_URL` as `metadataBase`.
 - **Branch:** `main`, with `feat/orbit-core` fast-forward merged into it. Both branches are pushed to `origin` (github.com/bennytimz/orbit). Commits must use only the configured git user (Bennytimz), with no co-author lines; see the user-level CLAUDE.md.

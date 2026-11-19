@@ -8,6 +8,7 @@ import { fail, ok, runAction, type ActionResult } from "@/lib/action-result";
 import { generateContent, suggestTransform, TRANSFORMS } from "@/engines/studio/generate";
 import { GENERATABLE_PLATFORMS, PLATFORMS } from "@/engines/studio/platforms";
 import type { ContentAsset, ContentStatus, ContentVersion, Platform } from "@/types/domain";
+import { removeObjects } from "@/lib/media/store";
 
 const PlatformEnum = z.enum(["linkedin", "x", "threads", "facebook", "instagram", "bluesky", "mastodon", "newsletter", "generic"]);
 
@@ -240,9 +241,26 @@ export async function setContentStatus(id: string, status: ContentStatus, feedba
 export async function deleteDraft(id: string): Promise<ActionResult> {
   return runAction("Could not delete the draft.", async () => {
     const { supabase, userId } = await requireUserForAction();
-    const { error } = await supabase.from("content_assets").delete().eq("id", z.string().uuid().parse(id)).eq("user_id", userId);
+    const assetId = z.string().uuid().parse(id);
+    // Image files are removed with the draft unless Buffer was given their URL:
+    // a scheduled post fetches its image when it publishes.
+    const orphanPaths = await unsentMediaPaths(supabase, userId, assetId);
+    const { error } = await supabase.from("content_assets").delete().eq("id", assetId).eq("user_id", userId);
     if (error) throw error;
+    if (orphanPaths.length) await removeObjects(orphanPaths).catch((e) => console.error("[orbit] Could not remove draft images", e instanceof Error ? e.message : e));
     revalidatePath("/studio");
     return ok(undefined, "Draft deleted. Anything already sent to Buffer is unaffected.");
   });
+}
+
+/** Storage paths of a draft's images that were never sent to Buffer. Errors return [] so nothing Buffer may need is deleted. */
+async function unsentMediaPaths(supabase: SupabaseClient, userId: string, assetId: string): Promise<string[]> {
+  const [media, sent] = await Promise.all([
+    supabase.from("content_media").select("id,storage_path").eq("content_asset_id", assetId).eq("user_id", userId),
+    supabase.from("buffer_publications").select("media_sent").eq("content_asset_id", assetId).eq("user_id", userId).not("media_sent", "is", null),
+  ]);
+  if (media.error || sent.error || !media.data?.length) return [];
+  const sentIds = new Set<string>();
+  for (const row of sent.data ?? []) for (const m of (row.media_sent as { media_id?: string }[] | null) ?? []) if (m.media_id) sentIds.add(m.media_id);
+  return media.data.filter((m) => !sentIds.has(m.id as string)).map((m) => m.storage_path as string);
 }

@@ -26,6 +26,10 @@ export interface MediaItemView {
   sentCount: number;
 }
 
+function formatBytes(n: number) {
+  return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function AltTextField({ item }: { item: MediaItemView }) {
   const [value, setValue] = useState(item.alt_text);
   const save = useAction(updateMediaAltText);
@@ -122,7 +126,7 @@ export function MediaSection({ assetId, platform, items }: { assetId: string; pl
               </div>
               <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>
-                  {formatLabel(m.mime_type)} · {(m.size_bytes / 1024 / 1024).toFixed(2)} MB{m.width && m.height ? ` · ${m.width}×${m.height}` : ""}
+                  {formatLabel(m.mime_type)} · {formatBytes(m.size_bytes)}{m.width && m.height ? ` · ${m.width}×${m.height}` : ""}
                 </span>
                 <Button size="icon-sm" variant="ghost" aria-label={`Remove image ${i + 1}`} onClick={() => setConfirm(m)}>
                   <Trash2 />
