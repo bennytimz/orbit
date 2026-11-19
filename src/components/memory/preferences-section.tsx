@@ -21,7 +21,7 @@ function Suggestion({ pref }: { pref: UserPreference }) {
       <div className="mb-1 flex flex-wrap items-center gap-1.5">
         <span className="font-medium">{pref.preference_key.replace(/_/g, " ")}</span>
         <Pill>{pref.confidence} confidence</Pill>
-        <Pill>{pref.source === "inferred_from_edits" ? "From your edits" : "From your feedback"}</Pill>
+        <Pill>{pref.source === "inferred_from_edits" ? "From your edits" : pref.preference_key.startsWith("performance_") ? "From post performance" : "From your feedback"}</Pill>
       </div>
       <Input value={value} onChange={(e) => setValue(e.target.value)} aria-label="Suggested preference" maxLength={500} />
       {pref.rationale ? <p className="mt-1 text-xs text-muted-foreground">Why: {pref.rationale}</p> : null}

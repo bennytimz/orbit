@@ -1,5 +1,35 @@
 # Session Handoff
 
+## PAUSED (2026-11-19, user's PC low on power). Read this first
+- **Branch:** `feat/post-commit` (pushed). `main` and production are untouched. Do not merge or deploy before 2026-11-21 (Lagos time).
+- **Phase / step:** Phase 2, feature **B (performance loop)**. The code is written, but there is **1 lint error** to fix: `src/components/publishing/performance-panel.tsx:45` (`react-hooks/set-state-in-effect`; it calls `run(false)` in `useEffect`). Fix it by triggering the initial load without a synchronous setState in the effect (e.g. use the `useEffect` + `startTransition`/async IIFE pattern, or load the initial data server-side and pass it as a prop). Then run typecheck, lint, test and build, and commit B.
+- **Done:**
+  - Phase 1: schema notes in `notes/buffer-schema-2026-11.md`.
+  - **A (media + Instagram):** committed `8001f4f` and live-tested (see below). The `publish-dialog.tsx` lint warning was fixed in that commit.
+- **Half-done:**
+  - B code: `src/lib/buffer/metrics.ts`, `src/engines/evolution/performance.ts`, `src/app/actions/performance.ts`, `src/components/publishing/performance-panel.tsx`, a new section on `src/app/(app)/publishing/page.tsx`, the Memory label "From post performance" for `performance_*` keys, and `tests/unit/performance.test.ts`. Unit tests pass (146/146) and typecheck passes. The lint error above remains. Build has not been re-run since A.
+  - B isn't live-verified in the UI yet. Live facts: metrics need `insightsRead`, which only personal API keys get, not OAuth. Production is OAuth-connected, so the panel will show the "needs a personal API key" notice. The personal key does return metrics, for 3 sent X posts that ORBIT didn't create.
+- **Not started:**
+  - C: group variants via Content Items `createContentItem`. The schema supports it with `posts:write` and needs no scope change. Plan: a new "Send variants together" action over a `generation_group`, all-or-nothing, recording `buffer_content_item_id`.
+  - D: RSS check, scheduled-post test (30+ days out, then delete), campaigns check, transcription graceful-failure check.
+  - E: Playwright E2E.
+  - F: landing page lines and docs (README, KNOWN_LIMITATIONS, TECHNICAL_DECISIONS: add TD-021 "media via 365-day signed URLs", BUILD_PROGRESS).
+  - Phase 3 regression. Phase 4 is not before 2026-11-21.
+- **Migrations run on the shared Supabase DB (2026-11-19, SQL editor, succeeded):** `supabase/migrations/20261119000000_post_commit_additions.sql`. It is additive only:
+  - new tables `content_media` and `buffer_post_metrics` (RLS, owner policies);
+  - nullable columns `buffer_publications.media_sent` and `buffer_publications.buffer_content_item_id`;
+  - private bucket `orbit-media` (4 MB; jpeg/png/gif; no storage.objects policies).
+  - Verified via the service role. The anon key sees nothing.
+- **Live Buffer objects:** LinkedIn drafts with an image, both **deleted**:
+  - `6afee8affcd8732ff2118ddf`: created, then deleted. Its first readback used the wrong query shape. Confirmed NOT_FOUND after the delete.
+  - `6afee8f38840f68c22be40a3`: created, read back (draft, linkedin, image/png asset), deleted, confirmed NOT_FOUND.
+  - Test files `live-test/*.png` were removed from `orbit-media`, and the bucket is empty.
+  - No Ideas, scheduled posts or other objects were created.
+- **Scopes changed:** none.
+- **Known breakage on the branch:** only the lint error above. The scratch scripts live in the session scratchpad, not in the repo.
+- **Exact next action:** fix the lint error in `performance-panel.tsx`, then run `npm run typecheck && npm run lint && npm test && npm run build` (Node 22). Commit "Add Performance panel …", then continue with C.
+
+
 _Session ended 2026-11-14. Production: https://orbit-theta-lyart.vercel.app_
 
 ## State

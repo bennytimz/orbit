@@ -8,6 +8,7 @@ import { ConnectBuffer } from "@/components/publishing/connect-buffer";
 import { ConnectionPanel } from "@/components/publishing/connection-panel";
 import { BufferPostsBrowser } from "@/components/publishing/buffer-posts";
 import { CheckStatusButton } from "@/components/publishing/check-status-button";
+import { PerformancePanel } from "@/components/publishing/performance-panel";
 import { formatDateTime, titleCase } from "@/lib/format";
 import type { BufferChannelRow, BufferPublication } from "@/types/domain";
 
@@ -77,6 +78,8 @@ export default async function PublishingPage({ searchParams }: { searchParams: P
           <BufferPostsBrowser channels={channelRows.map((c) => ({ id: c.channel_id, name: c.display_name ?? c.name }))} timeZone={tz} />
         </section>
       ) : null}
+
+      {connection ? <PerformancePanel timeZone={tz} /> : null}
 
       <section className="mt-8">
         <h2 className="mb-1 text-base font-semibold">ORBIT operation history</h2>
