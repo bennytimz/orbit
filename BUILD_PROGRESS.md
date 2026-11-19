@@ -34,6 +34,7 @@ Radar → research report → Develop My Perspective (text/voice) → Studio gen
 | Memory / Settings | Inspect/edit/delete identity, voice, preferences, knowledge; integration status, privacy, account deletion | typecheck |
 
 ## Test status
+- **2026-11-19 production (merged early with the user's approval):** `main` fast-forwarded to `feat/post-commit` and deployed; pages, Buffer connection, Ideas state and publish dialog verified in Chrome on production. Follow-ups deployed and verified the same way: React #418 fix (`af04d97`), RSS batching (`69e685c`), user-safe feed error (`23c548a`). The production RSS test hit Gemini 503 overload (see KNOWN_LIMITATIONS).
 - **2026-11-19 post-commit regression** (local production build on Node 22, signed in as the owner through the UI; every Buffer object created was verified and then deleted):
   - Every page loads; existing screens match production apart from the new sections.
   - Text-only LinkedIn draft, X thread draft (2 parts in `metadata.twitter.thread`), LinkedIn post scheduled for 2026-12-25 (`customScheduled`), LinkedIn draft with an image, and a grouped content item: all created through the UI, read back from Buffer and deleted.

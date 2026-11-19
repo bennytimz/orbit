@@ -1,46 +1,15 @@
 # Session Handoff
 
-## Post-commit build (2026-11-19). Read this first
-- **Branch:** `feat/post-commit` (pushed). `main` and production are untouched (`origin/main` = `d898ec7`). **Do not merge or deploy before 2026-11-21 (Lagos time).**
-- **State:** Phases 1–3 are complete. Phase 4 (merge + deploy) is the only step left. Typecheck, lint, 150 unit tests, `next build` and `npm run test:e2e` all pass on Node 22.
-- **Shipped on the branch** (details in BUILD_PROGRESS.md, TD-021–023):
-  - A. Image media on drafts (private `orbit-media` bucket, alt text, Guardian checks), sent to Buffer as assets. Instagram is allowed once an image is attached; it was not tested live because no Instagram channel is connected.
-  - B. Performance panel on Publishing (`Post.metrics`, API-key connections only) with "Suggest preferences" → Memory.
-  - C. "Send variants together" in Studio (`createContentItem`).
-  - D. Checks:
-    - Verified: scheduled post 30+ days out; campaigns list, calendar and phase edits; transcription graceful failure; the publish-dialog lint warning; Save to Ideas disabled state; both channels connected.
-    - RSS fetch works, but the Gemini analysis timed out (see KNOWN_LIMITATIONS).
-  - E. Playwright E2E (`npm run test:e2e`), Gemini and Buffer mocked in the test server, throwaway Supabase user per run.
-  - F. Landing page and docs:
-    - Buffer API list: three new feature lines with no labels, and "(added after submission)" removed from the createIdea line (user instruction, 2026-11-19).
-    - README, KNOWN_LIMITATIONS, TECHNICAL_DECISIONS and BUILD_PROGRESS updated.
-  - Fix: deleting a draft now deletes its image files, except images already sent to Buffer.
-- **Migration run on the shared DB (2026-11-19, SQL editor):** `supabase/migrations/20261119000000_post_commit_additions.sql`. It is additive only: `content_media`, `buffer_post_metrics`, two nullable `buffer_publications` columns and a private bucket. Nothing else to run at merge time.
-- **Scopes changed:** none. **New env vars:** none.
-- **Live Buffer objects created and deleted (all confirmed NOT_FOUND):**
-
-  | Kind | Buffer ID |
-  | --- | --- |
-  | Draft | `6afee8affcd8732ff2118ddf` |
-  | Draft | `6afee8f38840f68c22be40a3` |
-  | Draft | `6aff0dd3cfb6abb69448d215` |
-  | Draft (X thread) | `6aff0dfe76fc37c1234eb606` |
-  | Draft (image) | `6aff0e685187bf7d546ce550` |
-  | Scheduled post (2026-12-25) | `6aff0e1fe28319f49a0eb317` |
-  | Content item (with its posts) | `6aff0aeccac0791c5d93ad95` |
-  | Content item (with its posts) | `6aff0e8b5187bf7d546ceeae` |
-
-  - No Ideas were created.
-  - ORBIT's ledger rows for the 6 UI sends remain in Publishing → history, although those Buffer posts no longer exist.
-- **Exact next action (on or after 2026-11-21, Lagos):**
-  ```
-  git checkout main && git pull --ff-only
-  git merge --ff-only feat/post-commit
-  npm ci && npm run typecheck && npm run lint && npm test && npm run build
-  git push origin main
-  ```
-  - Pushing `main` deploys production if Vercel's Git integration is on. Otherwise run `vercel --prod`.
-  - Then open https://orbit-theta-lyart.vercel.app signed in and check Studio (Media section), Publishing (Performance) and the landing page.
+## Post-commit build: merged and live (2026-11-19). Read this first
+- **Production:** https://orbit-theta-lyart.vercel.app, serving `main` at `23c548a` (Vercel Git integration deploys every push to `main`). The user approved merging on 2026-11-19 instead of 2026-11-21.
+- **Rollback point:** the production deployment of `d898ec7` ("Fix Memory page crash…", Nov 16) in Vercel → orbit → Deployments (Production filter). To roll back: open its "…" menu and choose Promote/Instant Rollback, or `git revert` the commits below and push `main`. No rollback was needed.
+- **Commits on `main` since `d898ec7`:** `dc2f659` WIP pause, `8001f4f` media, `c23b34d` performance panel, `1422d42` content items, `80c68f9` E2E + docs + landing lines, `af04d97` React #418 fix, `69e685c` RSS batching, `23c548a` user-safe feed error, plus this docs commit.
+- **Shipped:** image media on drafts (Instagram allowed once an image is attached; not tested live), Performance panel (API-key connections only), "Send variants together" (`createContentItem`), Playwright E2E (`npm run test:e2e`), landing Buffer API lines (no labels), draft deletion removes unsent images, VoiceRecorder hydration fix, RSS batching.
+- **Production verification (2026-11-19, Chrome, signed in as the owner):** after each deploy every page returned 200 with no error boundary: Command Center, Radar, Research + one report, My Voice, Studio + one draft, Campaigns + one campaign, Guardian, Publishing, Memory, Settings, landing (signed out). Buffer connected (OAuth) with LinkedIn and X; "Saved to Ideas ✓" disabled; publish dialog opens with both channels (closed without approving); the landing page has no "(added after submission)" label; no React #418 on `/research/:id` after `af04d97`.
+- **Migration:** `20261119000000_post_commit_additions.sql`, already applied (additive). **Scopes:** unchanged. **Env vars:** none new.
+- **Live Buffer objects:** all test drafts, the scheduled post and both content items were deleted (IDs in BUILD_PROGRESS / the final report). No live posts, no Ideas. ORBIT ledger rows for the 6 test sends were deleted on 2026-11-19 so Command Center and Publishing no longer show them.
+- **Open item:** RSS-to-discovery on Gemini's free tier is unverified (production test hit Gemini 503 overload); see KNOWN_LIMITATIONS. The PostgreSQL news feed used for that test was unfollowed afterwards.
+- **Next action:** none required. Optional: retry one feed scan when Gemini isn't overloaded.
 
 _Session ended 2026-11-14. Production: https://orbit-theta-lyart.vercel.app_
 
