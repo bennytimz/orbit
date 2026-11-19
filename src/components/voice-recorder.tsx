@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Loader2, Mic, Square, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type State = "idle" | "recording" | "recorded" | "transcribing";
+
+const noopSubscribe = () => () => {};
+const recordingSupported = () => typeof window.MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+const serverSnapshot = () => false;
 
 /**
  * MediaRecorder-based voice capture: record, stop, play back, delete, and
@@ -30,7 +34,8 @@ export function VoiceRecorder({ available, onTranscript }: { available: boolean;
     [url],
   );
 
-  const supported = typeof window !== "undefined" && typeof window.MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+  // Read browser support after hydration: the server snapshot matches the server-rendered HTML.
+  const supported = useSyncExternalStore(noopSubscribe, recordingSupported, serverSnapshot);
 
   const start = async () => {
     try {
