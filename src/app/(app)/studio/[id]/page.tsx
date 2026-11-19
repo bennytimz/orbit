@@ -12,6 +12,7 @@ import { AddToCampaign } from "@/components/campaigns/add-to-campaign";
 import { ContentStatusPill, GuardianPill } from "@/components/shared";
 import { PLATFORMS } from "@/engines/studio/platforms";
 import { MediaSection, type MediaItemView } from "@/components/studio/media-section";
+import { SendVariantsDialog, type VariantView } from "@/components/publishing/send-variants-dialog";
 import { PREVIEW_URL_TTL_SECONDS, listAssetMedia, signedUrls } from "@/lib/media/store";
 import type { BufferChannelRow, ContentAsset, ContentVersion, GuardianIssue, GuardianReport, ResearchSource } from "@/types/domain";
 
@@ -44,6 +45,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
     : { data: [] };
   const connection = status.serviceRole ? await getConnection(userId).catch(() => null) : null;
   const media = await loadMediaViews(supabase, userId, id, status.serviceRole);
+  const variants = connection?.status === "active" && asset.generation_group && (siblings ?? []).length > 1 ? await loadVariantViews(supabase, userId, asset.generation_group) : [];
 
   const sources = new Map<string, { source: Pick<ResearchSource, "id" | "url" | "title" | "publisher" | "published_at">; claims: string[] }>();
   for (const r of (sourceRows ?? []) as unknown as { claim_text: string | null; research_sources: Pick<ResearchSource, "id" | "url" | "title" | "publisher" | "published_at"> | null }[]) {
@@ -102,6 +104,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
             campaignAsset={ca}
             media={media.items}
           />
+          {variants.length > 1 ? <SendVariantsDialog variants={variants} channels={(channels as BufferChannelRow[]) ?? []} timeZone={tz} /> : null}
           <GuardianPanel assetId={asset.id} report={report} issues={(issues as GuardianIssue[]) ?? []} guardianStatus={asset.guardian_status} aiAvailable={status.ai} />
           <AddToCampaign assetId={asset.id} campaigns={(campaigns ?? []) as { id: string; name: string }[]} currentCampaignId={asset.campaign_id} />
         </div>
@@ -138,4 +141,27 @@ async function loadMediaViews(
       sentCount: sent.get(r.id) ?? 0,
     })),
   };
+}
+
+/** The drafts generated together with this one, for "Send variants together". */
+async function loadVariantViews(supabase: Awaited<ReturnType<typeof requireUser>>["supabase"], userId: string, group: string): Promise<VariantView[]> {
+  const { data: rows } = await supabase
+    .from("content_assets")
+    .select("id, title, platform, body, thread_parts, guardian_status, status")
+    .eq("user_id", userId)
+    .eq("generation_group", group)
+    .order("created_at");
+  const assets = ((rows ?? []) as (VariantView["asset"] & { status: string })[]).filter((a) => a.status !== "archived" && a.status !== "rejected");
+  const ids = assets.map((a) => a.id);
+  if (!ids.length) return [];
+  const [{ data: issues }, { data: mediaRows }] = await Promise.all([
+    supabase.from("guardian_issues").select("content_asset_id").eq("user_id", userId).in("content_asset_id", ids).eq("review_status", "open").eq("severity", "blocking"),
+    supabase.from("content_media").select("content_asset_id").eq("user_id", userId).in("content_asset_id", ids),
+  ]);
+  const count = (list: { content_asset_id: string }[] | null, id: string) => (list ?? []).filter((r) => r.content_asset_id === id).length;
+  return assets.map((a) => ({
+    asset: { id: a.id, title: a.title, platform: a.platform, body: a.body, thread_parts: a.thread_parts, guardian_status: a.guardian_status },
+    blockingIssues: count(issues as { content_asset_id: string }[] | null, a.id),
+    mediaCount: count(mediaRows as { content_asset_id: string }[] | null, a.id),
+  }));
 }
